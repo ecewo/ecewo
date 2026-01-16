@@ -61,6 +61,7 @@ if(NOT TARGET ecewo::ecewo)
     src/arena.c
     src/arena-pool.c
     src/spawn.c
+    src/body.c
     src/utils/date-cache.c
   )
 

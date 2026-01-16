@@ -49,6 +49,11 @@ typedef struct
 
   llhttp_errno_t last_error;
   const char *error_reason;
+
+  // Body streaming support
+  void *body_stream_ctx;        // BodyStreamCtx pointer
+  bool body_streaming_enabled;  // True if streaming mode active
+  bool body_paused;             // True if backpressure applied
 } http_context_t;
 
 // Using in router.c
@@ -68,6 +73,11 @@ int on_method_cb(llhttp_t *parser, const char *at, size_t length);
 int on_body_cb(llhttp_t *parser, const char *at, size_t length);
 int on_headers_complete_cb(llhttp_t *parser);
 int on_message_complete_cb(llhttp_t *parser);
+
+void http_context_init(http_context_t *context,
+                       Arena *arena,
+                       llhttp_t *reused_parser,
+                       llhttp_settings_t *reused_settings);
 
 // Utility function for debugging
 const char *parse_result_to_string(parse_result_t result);

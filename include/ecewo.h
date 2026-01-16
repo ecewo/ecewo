@@ -280,6 +280,39 @@ void register_options(const char *path, int mw_count, ...);
 #define options(path, ...) \
   register_options(path, MW(__VA_ARGS__), __VA_ARGS__)
 
+// Get buffered body data (NULL if in streaming mode or no body)
+const char *body_bytes(const Req *req);
+
+// Get body length in bytes
+size_t body_len(const Req *req);
+
+// Data callback - called for each body chunk
+// Return true to continue receiving data, false to pause (backpressure)
+typedef bool (*BodyDataCb)(Req *req, const char *data, size_t len, void *ctx);
+
+// End callback - called when all body data has been received
+typedef void (*BodyEndCb)(Req *req, void *ctx);
+
+// Error callback - called if body processing encounters an error
+typedef void (*BodyErrorCb)(Req *req, const char *error, void *ctx);
+
+// Enable streaming mode with data callback
+// Must be called BEFORE body data arrives (first line in handler recommended)
+// Once called, body_bytes() will return NULL
+void body_on_data(Req *req, BodyDataCb callback, void *ctx);
+void body_on_end(Req *req, BodyEndCb callback, void *ctx);
+void body_on_error(Req *req, BodyErrorCb callback, void *ctx);
+
+// Stops reading from socket until body_resume() is called
+void body_pause(Req *req);
+
+void body_resume(Req *req);
+
+// Set maximum body size in bytes (default: 1MB)
+// Requests exceeding this size will trigger the error callback
+// Returns the previous limit
+size_t body_limit(Req *req, size_t max_bytes);
+
 // DEVELOPMENT FUNCTIONS FOR PLUGINS
 bool client_is_valid(void *client_socket_data);
 void client_ref(client_t *client);

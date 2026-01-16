@@ -5,6 +5,7 @@
 #include "arena.h"
 #include "utils.h"
 #include "request.h"
+#include "body.h"
 #include "logger.h"
 
 extern void send_error(Arena *request_arena, uv_tcp_t *client_socket, int error_code);
@@ -68,6 +69,12 @@ static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket) {
   req->ctx = arena_alloc(request_arena, sizeof(context_t));
   if (req->ctx)
     memset(req->ctx, 0, sizeof(context_t));
+
+  // TODO: Something like body_ctx_init_fn might be useful
+  // for implementing hooks like fastify has
+  // but I'm not sure about that
+  // so I'll just leave a comment line
+  // body_ctx_init(req);
 
   return req;
 }
@@ -153,7 +160,6 @@ int router(client_t *client, const char *request_data, size_t request_len) {
   if (uv_is_closing((uv_handle_t *)&client->handle))
     return REQUEST_CLOSE;
 
-  // Parse the incoming data (appends to existing parsed data if partial)
   parse_result_t parse_result = http_parse_request(persistent_ctx, request_data, request_len);
 
   switch (parse_result) {
@@ -161,8 +167,10 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     break;
 
   case PARSE_INCOMPLETE:
-    // Need more data - don't create arena, don't send error
-    // Just return and wait for more data
+    if (persistent_ctx->body_paused) {
+      LOG_DEBUG("Body paused - backpressure applied");
+      return REQUEST_PENDING;
+    }
     LOG_DEBUG("HTTP parsing incomplete - waiting for more data");
     return REQUEST_PENDING;
 
@@ -197,7 +205,6 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     return REQUEST_CLOSE;
   }
 
-  // Check if we need to finish parsing
   if (http_message_needs_eof(persistent_ctx)) {
     parse_result_t finish_result = http_finish_parsing(persistent_ctx);
     if (finish_result != PARSE_SUCCESS) {
@@ -205,6 +212,9 @@ int router(client_t *client, const char *request_data, size_t request_len) {
 
       if (persistent_ctx->error_reason)
         LOG_ERROR(" - %s", persistent_ctx->error_reason);
+
+      body_on_error_internal(req, persistent_ctx->error_reason ? 
+                             persistent_ctx->error_reason : "Parse error");
 
       send_error(request_arena, handle, 400);
       return REQUEST_CLOSE;
@@ -219,11 +229,6 @@ int router(client_t *client, const char *request_data, size_t request_len) {
   if (!path || path_len == 0) {
     path = "/";
     path_len = 1;
-  }
-
-  if (!path) {
-    send_error(request_arena, handle, 400);
-    return REQUEST_CLOSE;
   }
 
   if (!global_route_trie || !persistent_ctx->method) {
@@ -272,9 +277,8 @@ int router(client_t *client, const char *request_data, size_t request_len) {
 
       chain_start(req, res, &dummy_mw);
 
-      if (res->replied) {
+      if (res->replied)
         return res->keep_alive ? REQUEST_KEEP_ALIVE : REQUEST_CLOSE;
-      }
     }
 
     bool keep_alive = res->keep_alive;
@@ -298,13 +302,25 @@ int router(client_t *client, const char *request_data, size_t request_len) {
   if (!middleware_info) {
     LOG_DEBUG("No middleware info");
     match.handler(req, res);
+    
+    // Notify body completion if streaming was used
+    if (persistent_ctx->body_stream_ctx)
+      body_on_complete(req);
+    
+    if (!res->replied)
+      return REQUEST_PENDING;
+    
     return res->keep_alive ? REQUEST_KEEP_ALIVE : REQUEST_CLOSE;
   }
 
   chain_start(req, res, middleware_info);
+  
+  // Notify body completion if streaming was used
+  if (persistent_ctx->body_stream_ctx)
+    body_on_complete(req);
+  
   if (!res->replied)
     return REQUEST_PENDING;
 
-  // Arena will be reset in write_completion_cb after response is sent
   return res->keep_alive ? REQUEST_KEEP_ALIVE : REQUEST_CLOSE;
 }

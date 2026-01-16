@@ -685,7 +685,20 @@ int request_timeout(Res *res, uint64_t timeout_ms) {
   return 0;
 }
 
-static void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
+void server_alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
+  (void)suggested_size;
+  client_t *client = (client_t *)handle->data;
+
+  if (!client || client->closing || ecewo_server.shutdown_requested) {
+    buf->base = NULL;
+    buf->len = 0;
+    return;
+  }
+
+  *buf = client->read_buf;
+}
+
+void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
   client_t *client = (client_t *)stream->data;
 
   if (!client || client->closing)
@@ -763,7 +776,7 @@ static void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
 
     case REQUEST_PENDING:
       // It may be PARSE_INCOMPLETE, need to wait for more data
-      // or may be an async operation
+      // or may be an async operation, or body paused
       // request_in_progress should stay true
       // do not close, do not reset
       break;
@@ -775,17 +788,22 @@ static void on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
   }
 }
 
-static void alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
-  (void)suggested_size;
-  client_t *client = (client_t *)handle->data;
-
-  if (!client || client->closing || ecewo_server.shutdown_requested) {
-    buf->base = NULL;
-    buf->len = 0;
+// Resume reading after backpressure pause (called from body.c)
+void resume_client_read(client_t *client) {
+  if (!client || client->closing)
     return;
+  
+  if (uv_is_closing((uv_handle_t *)&client->handle))
+    return;
+  
+  int result = uv_read_start((uv_stream_t *)&client->handle, 
+                              server_alloc_buffer, 
+                              server_on_read);
+  if (result != 0) {
+    LOG_ERROR("Failed to resume read: %s", uv_strerror(result));
+  } else {
+    LOG_DEBUG("Client read resumed successfully");
   }
-
-  *buf = client->read_buf;
 }
 
 static void on_connection(uv_stream_t *server, int status) {
@@ -837,7 +855,9 @@ static void on_connection(uv_stream_t *server, int status) {
   if (uv_accept(server, (uv_stream_t *)&client->handle) == 0) {
     uv_tcp_nodelay(&client->handle, 1);
 
-    if (uv_read_start((uv_stream_t *)&client->handle, alloc_buffer, on_read) == 0) {
+    if (uv_read_start((uv_stream_t *)&client->handle, 
+                      server_alloc_buffer, 
+                      server_on_read) == 0) {
       add_client_to_list(client);
       ecewo_server.active_connections++;
     } else {

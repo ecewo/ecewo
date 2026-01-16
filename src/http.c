@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include "http.h"
+#include "body.h"
 #include "logger.h"
 
 #define MIN_BUFFER_SIZE 64
@@ -337,6 +338,24 @@ int on_body_cb(llhttp_t *parser, const char *at, size_t length) {
 
   http_context_t *context = (http_context_t *)parser->data;
 
+  if (context->body_streaming_enabled && context->body_stream_ctx) {
+    int result = body_stream_on_chunk(context->body_stream_ctx, at, length);
+    
+    if (result < 0) {
+      llhttp_set_error_reason(parser, ERROR_REASON_PAYLOAD_TOO_LARGE);
+      return HPE_USER;
+    }
+    
+    if (result == 1) {
+      context->body_paused = true;
+      LOG_DEBUG("Body parsing paused - backpressure");
+      return HPE_PAUSED;
+    }
+    
+    return HPE_OK;
+  }
+
+  // Default buffering
   int result = ensure_buffer_capacity(context->arena,
                                       &context->body,
                                       &context->body_capacity,
@@ -365,9 +384,16 @@ int on_headers_complete_cb(llhttp_t *parser) {
 
   context->http_major = llhttp_get_http_major(parser);
   context->http_minor = llhttp_get_http_minor(parser);
-
   context->keep_alive = llhttp_should_keep_alive(parser);
   context->headers_complete = 1;
+
+  // Signal that headers are complete
+  // This allows streaming handlers to start processing
+  // Note: Router will need to handle this signal for early invocation
+  if (context->body_streaming_enabled && context->body_stream_ctx) {
+    LOG_DEBUG("Headers complete - streaming mode ready");
+    // Router will detect headers_complete=1 and invoke handler early
+  }
 
   return HPE_OK;
 }
@@ -446,6 +472,10 @@ void http_context_init(http_context_t *context,
   context->headers_complete = 0;
   context->last_error = HPE_OK;
   context->error_reason = NULL;
+
+  context->body_stream_ctx = NULL;
+  context->body_streaming_enabled = false;
+  context->body_paused = false;
 }
 
 parse_result_t http_parse_request(http_context_t *context, const char *data, size_t len) {
