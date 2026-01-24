@@ -39,9 +39,8 @@ static size_t total_bytes = 0;
 
 // TODO: Fix the streaming test
 
-bool on_chunk(Req *req, const char *data, size_t len, void *ctx) {
+bool on_chunk(Req *req, const char *data, size_t len) {
   (void)req;
-  (void)ctx;
   
   chunks_received++;
   total_bytes += len;
@@ -52,8 +51,7 @@ bool on_chunk(Req *req, const char *data, size_t len, void *ctx) {
   return true; // Continue receiving
 }
 
-void on_complete(Req *req, void *ctx) {
-  (void)ctx;
+void on_complete(Req *req) {
   Res *res = get_context(req, "_res");
   
   char *response = arena_sprintf(req->arena, 
@@ -70,8 +68,8 @@ void handler_streaming(Req *req, Res *res) {
   total_bytes = 0;
   
   set_context(req, "_res", res);
-  body_on_data(req, on_chunk, NULL);
-  body_on_end(req, on_complete, NULL);
+  body_on_data(req, on_chunk);
+  body_on_end(req, on_complete);
 }
 
 void handler_buffered(Req *req, Res *res) {

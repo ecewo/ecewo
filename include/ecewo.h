@@ -288,30 +288,30 @@ size_t body_len(const Req *req);
 
 // Data callback - called for each body chunk
 // Return true to continue receiving data, false to pause (backpressure)
-typedef bool (*BodyDataCb)(Req *req, const char *data, size_t len, void *ctx);
+typedef bool (*BodyDataCb)(Req *req, const char *data, size_t len);
 
 // End callback - called when all body data has been received
-typedef void (*BodyEndCb)(Req *req, void *ctx);
+typedef void (*BodyEndCb)(Req *req);
 
 // Error callback - called if body processing encounters an error
-typedef void (*BodyErrorCb)(Req *req, const char *error, void *ctx);
+typedef void (*BodyErrorCb)(Req *req, const char *error);
 
 // Enable streaming mode with data callback
 // Must be called BEFORE body data arrives (first line in handler recommended)
 // Once called, body_bytes() will return NULL
-void body_on_data(Req *req, BodyDataCb callback, void *ctx);
-void body_on_end(Req *req, BodyEndCb callback, void *ctx);
-void body_on_error(Req *req, BodyErrorCb callback, void *ctx);
+// TODO: Enable the streaming in router fn
+void body_on_data(Req *req, BodyDataCb callback);
+void body_on_end(Req *req, BodyEndCb callback);
+void body_on_error(Req *req, BodyErrorCb callback);
 
-// Stops reading from socket until body_resume() is called
 void body_pause(Req *req);
-
 void body_resume(Req *req);
 
-// Set maximum body size in bytes (default: 1MB)
-// Requests exceeding this size will trigger the error callback
-// Returns the previous limit
-size_t body_limit(Req *req, size_t max_bytes);
+// Requests exceeding the size will trigger the error callback
+// Returns the previous limit for now
+// to allow to temporarily change the limit and restore it later.
+// Need to think about simplifying it with just void return
+size_t body_limit(Req *req, size_t max_bytes); // default max_bytes: 1MB
 
 // DEVELOPMENT FUNCTIONS FOR PLUGINS
 bool client_is_valid(void *client_socket_data);

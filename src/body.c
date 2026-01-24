@@ -1,9 +1,8 @@
 // TODO: Early return in router.c before buffering all the body.
-// TODO: Use req->context instead of passing void *ctx parameters
+// TODO: Use req->context instead of passing void *ctx parameters // DONE
 
 #include "ecewo.h"
 #include "uv.h"
-#include "body.h"
 #include "http.h"
 #include "arena.h"
 #include "server.h"
@@ -22,18 +21,24 @@
 #endif
 
 typedef struct BodyStreamCtx {
+  // Request reference
   Req *req;
   client_t *client;
+  
+  // Configuration
   bool streaming_enabled;
   size_t max_size;
+  
+  // Metrics
   size_t bytes_received;
   bool first_chunk;
   bool completed;
   bool errored;
+  
+  // Streaming callbacks
   BodyDataCb on_data;
   BodyEndCb on_end;
   BodyErrorCb on_error;
-  void *cb_ctx;
 } BodyStreamCtx;
 
 static const BodyStreamCtx *get_stream_ctx(const Req *req) {
@@ -85,7 +90,7 @@ const char *body_bytes(const Req *req) {
   if (!req)
     return NULL;
   
-  BodyStreamCtx *ctx = get_stream_ctx(req);
+  const BodyStreamCtx *ctx = get_stream_ctx(req);
   if (ctx && ctx->streaming_enabled)
     return NULL;
   
@@ -96,14 +101,14 @@ size_t body_len(const Req *req) {
   if (!req)
     return 0;
   
-  BodyStreamCtx *ctx = get_stream_ctx(req);
+  const BodyStreamCtx *ctx = get_stream_ctx(req);
   if (ctx && ctx->streaming_enabled)
     return 0;
   
   return req->body_len;
 }
 
-void body_on_data(Req *req, BodyDataCb callback, void *ctx) {
+void body_on_data(Req *req, BodyDataCb callback) {
   if (!req || !callback)
     return;
   
@@ -113,7 +118,6 @@ void body_on_data(Req *req, BodyDataCb callback, void *ctx) {
   
   sctx->streaming_enabled = true;
   sctx->on_data = callback;
-  sctx->cb_ctx = ctx;
   
   if (sctx->client && sctx->client->parser_initialized) {
     http_context_t *http_ctx = &sctx->client->persistent_context;
@@ -125,11 +129,11 @@ void body_on_data(Req *req, BodyDataCb callback, void *ctx) {
   if (req->body && req->body_len > 0 && sctx->bytes_received == 0) {
     sctx->bytes_received = req->body_len;
     sctx->first_chunk = false;
-    callback(req, req->body, req->body_len, ctx);
+    callback(req, req->body, req->body_len);
   }
 }
 
-void body_on_end(Req *req, BodyEndCb callback, void *ctx) {
+void body_on_end(Req *req, BodyEndCb callback) {
   if (!req)
     return;
   
@@ -138,14 +142,12 @@ void body_on_end(Req *req, BodyEndCb callback, void *ctx) {
     return;
   
   sctx->on_end = callback;
-  if (!sctx->cb_ctx)
-    sctx->cb_ctx = ctx;
   
   if (sctx->completed && callback)
-    callback(req, sctx->cb_ctx);
+    callback(req);
 }
 
-void body_on_error(Req *req, BodyErrorCb callback, void *ctx) {
+void body_on_error(Req *req, BodyErrorCb callback) {
   if (!req)
     return;
   
@@ -154,15 +156,13 @@ void body_on_error(Req *req, BodyErrorCb callback, void *ctx) {
     return;
   
   sctx->on_error = callback;
-  if (!sctx->cb_ctx)
-    sctx->cb_ctx = ctx;
 }
 
 void body_pause(Req *req) {
   if (!req)
     return;
   
-  BodyStreamCtx *ctx = get_stream_ctx(req);
+  const BodyStreamCtx *ctx = get_stream_ctx(req);
   if (!ctx)
     return;
   
@@ -184,7 +184,7 @@ void body_resume(Req *req) {
   if (!req)
     return;
   
-  BodyStreamCtx *ctx = get_stream_ctx(req);
+  const BodyStreamCtx *ctx = get_stream_ctx(req);
   if (!ctx)
     return;
   
@@ -219,6 +219,7 @@ size_t body_limit(Req *req, size_t max_size) {
 
 // Called by http.c (on_body_cb) when body data arrives
 // Returns: 0 = continue, 1 = pause (backpressure), -1 = error
+// TODO: Use enums for return values
 int body_stream_on_chunk(void *stream_ctx, const char *data, size_t len) {
   BodyStreamCtx *ctx = (BodyStreamCtx *)stream_ctx;
   if (!ctx || !data || len == 0)
@@ -228,52 +229,53 @@ int body_stream_on_chunk(void *stream_ctx, const char *data, size_t len) {
     ctx->errored = true;
     
     if (ctx->on_error)
-      ctx->on_error(ctx->req, "Body exceeds size limit", ctx->cb_ctx);
+      ctx->on_error(ctx->req, "Body exceeds size limit");
     
     return -1;
   }
   
   ctx->bytes_received += len;
   
+  // Deliver to callback if streaming enabled
   if (ctx->streaming_enabled && ctx->on_data) {
-    bool continue_reading = ctx->on_data(ctx->req, data, len, ctx->cb_ctx);
+    bool continue_reading = ctx->on_data(ctx->req, data, len);
     ctx->first_chunk = false;
     
     if (!continue_reading)
-      return 1;
+      return 1;  // Signal backpressure
   }
   
   return 0;
 }
 
-// Called from router.c after request fully parsed
+// Called from router.c
 void body_on_complete(Req *req) {
   if (!req)
     return;
   
-  BodyStreamCtx *ctx = get_stream_ctx(req);
+  BodyStreamCtx *ctx = get_stream_ctx_mut(req);
   if (!ctx)
     return;
   
   ctx->completed = true;
   
   if (ctx->on_end)
-    ctx->on_end(req, ctx->cb_ctx);
+    ctx->on_end(req);
 }
 
-// Called from router.c if parse error occurs
+// Called from router.c
 void body_on_error_internal(Req *req, const char *error) {
   if (!req)
     return;
   
-  BodyStreamCtx *ctx = get_stream_ctx(req);
+  BodyStreamCtx *ctx = get_stream_ctx_mut(req);
   if (!ctx)
     return;
   
   ctx->errored = true;
   
   if (ctx->on_error)
-    ctx->on_error(req, error, ctx->cb_ctx);
+    ctx->on_error(req, error);
 }
 
 // It might be useful in future
@@ -283,28 +285,30 @@ void body_on_error_internal(Req *req, const char *error) {
 // }
 
 
-// Examples:
-//
-//   // Buffered mode (default)
-//   void handler(Req *req, Res *res) {
-//     const char *body = body_bytes(req);
-//     size_t len = body_len(req);
-//     send_json(res, OK, body);
-//   }
-//
-// // Streaming mode
-// void handler(Req *req, Res *res) {
-//   set_context(req, "_res", res);
-//   body_on_data(req, on_chunk, my_ctx);
-//   body_on_end(req, on_complete, my_ctx);
+
+// EXAMPLE:
+
+// bool on_chunk_stream(Req *req, const char *data, size_t len) {
+//   // Res *res = get_context(req, "res"); // get ctx if needed
+//   printf("Received chunk: %zu bytes\n", len);
+//   // Process chunk (write to disk, etc.)
+//   return true; // Continue reading
 // }
 
-// bool on_chunk(Req *req, const char *data, size_t len, void *ctx) {
-//   write_to_disk(data, len);
-//   return true; // or false to pause
-// }
-
-// void on_complete(Req *req, void *ctx) {
-//   Res *res = get_context(req, "_res");
+// void on_complete_stream(Req *req) {
+//   Res *res = get_context(req, "res");
 //   send_text(res, OK, "Upload complete");
+// }
+
+// void on_error_stream(Req *req, const char *error) {
+//   Res *res = get_context(req, "res");
+//   char *msg = arena_sprintf(req->arena, "Error: %s", error);
+//   send_text(res, INTERNAL_SERVER_ERROR, msg);
+// }
+
+// void handler_streaming(Req *req, Res *res) {
+//   set_context(req, "res", res);
+//   body_on_data(req, on_chunk_stream);
+//   body_on_end(req, on_complete_stream);
+//   body_on_error(req, on_error_stream);
 // }

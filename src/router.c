@@ -303,7 +303,6 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     LOG_DEBUG("No middleware info");
     match.handler(req, res);
     
-    // Notify body completion if streaming was used
     if (persistent_ctx->body_stream_ctx)
       body_on_complete(req);
     
@@ -315,7 +314,6 @@ int router(client_t *client, const char *request_data, size_t request_len) {
 
   chain_start(req, res, middleware_info);
   
-  // Notify body completion if streaming was used
   if (persistent_ctx->body_stream_ctx)
     body_on_complete(req);
   
