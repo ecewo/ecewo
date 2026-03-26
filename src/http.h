@@ -45,7 +45,7 @@ typedef enum {
 // Called by on_body_cb when a chunk arrives in streaming mode.
 // Return  0 = continue
 // Return -1 = abort (size limit, etc.)
-typedef int (*body_chunk_cb_t)(void *udata, const char *chunk, size_t len);
+typedef int (*body_chunk_cb_t)(void *udata, const uint8_t *chunk, size_t len);
 
 typedef struct {
   Arena *arena;
@@ -68,7 +68,7 @@ typedef struct {
   request_t url_params;
 
   // Body (buffered)
-  char *body;
+  uint8_t *body;
   size_t body_length;
   size_t body_capacity;
 

@@ -33,7 +33,7 @@ typedef struct {
 } StreamContext;
 
 
-void chunk_callback(Req *req, const char *data, size_t len) {
+void chunk_callback(Req *req, const uint8_t *data, size_t len) {
   StreamContext *ctx = get_context(req, "stream_ctx");
   ctx->chunks_received++;
   ctx->total_bytes += len;
@@ -88,7 +88,7 @@ int test_streaming_mode(void) {
 
 void handler_buffered(Req *req, Res *res) {
   char *response = arena_sprintf(req->arena, "len=%zu,body='%s'",
-    req->body_len, req->body ? req->body : "NULL");
+    req->body_len, req->body ? (const char *)req->body : "NULL");
   send_text(res, OK, response);
 }
 

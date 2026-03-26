@@ -59,7 +59,7 @@ typedef struct Req {
   uv_tcp_t *client_socket;
   char *method;
   char *path;
-  char *body;
+  uint8_t *body;
   size_t body_len;
   request_t headers;
   request_t query;
@@ -303,7 +303,7 @@ void ecewo_register_options(const char *path, int mw_count, ...);
   ecewo_register_options(path, MW(__VA_ARGS__), __VA_ARGS__)
 
 // Called for each chunk of body data.
-typedef void (*BodyDataCb)(Req *req, const char *data, size_t len);
+typedef void (*BodyDataCb)(Req *req, const uint8_t *data, size_t len);
 
 // Called when the full body has been received.
 typedef void (*BodyEndCb)(Req *req, Res *res);

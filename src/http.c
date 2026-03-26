@@ -366,7 +366,7 @@ int on_body_cb(llhttp_t *parser, const char *at, size_t length) {
 
   // Streaming mode (opt-in via body_stream middleware)
   if (context->on_body_chunk) {
-    int result = context->on_body_chunk(context->stream_udata, at, length);
+    int result = context->on_body_chunk(context->stream_udata, (const uint8_t *)at, length);
 
     if (result < 0) {
       llhttp_set_error_reason(parser, ERROR_REASON_PAYLOAD_TOO_LARGE);
@@ -384,11 +384,13 @@ int on_body_cb(llhttp_t *parser, const char *at, size_t length) {
   }
 
   // Default behavior: buffer in memory
+  char *body_tmp = (char *)context->body;
   int result = ensure_buffer_capacity(context->arena,
-                                      &context->body,
+                                      &body_tmp,
                                       &context->body_capacity,
                                       context->body_length,
                                       length);
+  context->body = (uint8_t *)body_tmp;
   if (result == -2) {
     llhttp_set_error_reason(parser, ERROR_REASON_PAYLOAD_TOO_LARGE);
     return HPE_USER; // Payload too large

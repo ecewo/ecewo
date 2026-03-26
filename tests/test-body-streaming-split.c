@@ -59,7 +59,7 @@ typedef struct {
   size_t total_bytes;
 } SplitCtx;
 
-static void on_chunk(Req *req, const char *data, size_t len) {
+static void on_chunk(Req *req, const uint8_t *data, size_t len) {
   SplitCtx *ctx = get_context(req, "split_ctx");
   ctx->chunks_received++;
   ctx->total_bytes += len;

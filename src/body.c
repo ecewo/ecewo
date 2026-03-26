@@ -81,7 +81,7 @@ static StreamCtx *get_or_create_ctx(Req *req) {
 // body_chunk_cb_t implementation (called from on_body_cb in http.c)
 // This is the function pointer stored in http_context_t->on_body_chunk
 // It receives raw chunks as they arrive from the parser.
-static int stream_on_chunk(void *udata, const char *data, size_t len) {
+static int stream_on_chunk(void *udata, const uint8_t *data, size_t len) {
   StreamCtx *ctx = (StreamCtx *)udata;
   if (!ctx || !data || len == 0)
     return BODY_CHUNK_CONTINUE;
