@@ -30,11 +30,11 @@ static void ok_handler(Req *req, Res *res) {
   send_text(res, 200, "ok");
 }
 
-static void setup_routes(void) {
-  get("/users", ok_handler);
-  post("/users", ok_handler);
-  get("/users/:id", ok_handler);
-  get("/files/*", ok_handler);
+static void setup_routes(App *app) {
+  get(app, "/users", ok_handler);
+  post(app, "/users", ok_handler);
+  get(app, "/users/:id", ok_handler);
+  get(app, "/files/*", ok_handler);
 }
 
 // POST /users is registered -> GET and POST are both allowed

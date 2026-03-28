@@ -39,6 +39,28 @@ typedef uv_timer_t Timer;
 
 typedef struct client_s client_t;
 
+// Opaque internal server state
+// Do not access directly
+struct server_t;
+
+// Create with ecewo()
+typedef struct App {
+  // Runtime configuration: set before calling server_listen()
+  int max_connections; // default: 10000
+  int listen_backlog; // default: 511
+  uint64_t idle_timeout_ms; // default: 60000
+  uint64_t request_timeout_ms; // default: 0 (disabled)
+  uint64_t cleanup_interval_ms; // default: 30000
+  uint64_t shutdown_timeout_ms; // default: 15000
+
+  // App-lifetime arena: use for plugin configs, middleware state, any app-scoped data.
+  // Freed automatically at shutdown. Never reset between requests.
+  Arena *arena;
+
+  // Internal state, do not touch
+  struct server_t *internal;
+} App;
+
 // Internal struct, do not use it
 typedef struct {
   const char *key;
@@ -55,6 +77,7 @@ typedef struct {
 typedef struct context_t context_t;
 
 typedef struct Req {
+  App *app;
   Arena *arena;
   uv_tcp_t *client_socket;
   char *method;
@@ -173,12 +196,12 @@ typedef void (*MiddlewareHandler)(Req *req, Res *res, Next next);
 typedef void (*shutdown_callback_t)(void);
 typedef void (*timer_callback_t)(void *user_data);
 
-// SERVER FUNCTIONS
-int server_init(void);
-int server_listen(uint16_t port);
-void server_run(void);
-void server_shutdown(void);
-void server_atexit(shutdown_callback_t callback);
+// APP FUNCTIONS
+App *ecewo(void);
+int server_listen(App *app, uint16_t port);
+void server_run(App *app);
+void server_shutdown(App *app);
+void server_atexit(App *app, shutdown_callback_t callback);
 
 // TIMER FUNCTIONS
 Timer *set_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data);
@@ -223,18 +246,18 @@ static inline void send_json(Res *res, int status, const char *body) {
 // MIDDLEWARE FUNCTIONS
 
 // Internal function, do not use it
-void ecewo_register_use(const char *path, MiddlewareHandler middleware_handler);
+void ecewo_register_use(App *app, const char *path, MiddlewareHandler middleware_handler);
 
 // Internal macro, do not use it
 #define ECEWO_USE_SELECT(_1, _2, NAME, ...) NAME
 // Internal macro, do not use it
-#define ECEWO_USE_GLOBAL(fn) ecewo_register_use(NULL, fn)
+#define ECEWO_USE_GLOBAL(app, fn) ecewo_register_use(app, NULL, fn)
 // Internal macro, do not use it
-#define ECEWO_USE_PATH(path, fn) ecewo_register_use(path, fn)
+#define ECEWO_USE_PATH(app, path, fn) ecewo_register_use(app, path, fn)
 
-// use(fn) => global middleware, runs for every request
-// use("/path", fn) => prefix middleware, runs only when path starts with "/path"
-#define use(...) ECEWO_USE_SELECT(__VA_ARGS__, ECEWO_USE_PATH, ECEWO_USE_GLOBAL)(__VA_ARGS__)
+// use(app, fn) => global middleware, runs for every request
+// use(app, "/path", fn) => prefix middleware, runs only when path starts with "/path"
+#define use(app, ...) ECEWO_USE_SELECT(__VA_ARGS__, ECEWO_USE_PATH, ECEWO_USE_GLOBAL)(app, __VA_ARGS__)
 
 void set_context(Req *req, const char *key, void *data);
 void *get_context(Req *req, const char *key);
@@ -266,41 +289,35 @@ typedef enum {
 #define MW(...) \
   (sizeof((void *[]) { __VA_ARGS__ }) / sizeof(void *) - 1)
 
-// Internal function, do not use it
-void ecewo_register_get(const char *path, int mw_count, ...);
-// Internal function, do not use it
-void ecewo_register_post(const char *path, int mw_count, ...);
-// Internal function, do not use it
-void ecewo_register_put(const char *path, int mw_count, ...);
-// Internal function, do not use it
-void ecewo_register_patch(const char *path, int mw_count, ...);
-// Internal function, do not use it
-void ecewo_register_del(const char *path, int mw_count, ...);
-// Internal function, do not use it
-void ecewo_register_headl(const char *path, int mw_count, ...);
-// Internal function, do not use it
-void ecewo_register_options(const char *path, int mw_count, ...);
+// Internal functions, do not use them directly
+void ecewo_register_get(App *app, const char *path, int mw_count, ...);
+void ecewo_register_post(App *app, const char *path, int mw_count, ...);
+void ecewo_register_put(App *app, const char *path, int mw_count, ...);
+void ecewo_register_patch(App *app, const char *path, int mw_count, ...);
+void ecewo_register_del(App *app, const char *path, int mw_count, ...);
+void ecewo_register_head(App *app, const char *path, int mw_count, ...);
+void ecewo_register_options(App *app, const char *path, int mw_count, ...);
 
-#define get(path, ...) \
-  ecewo_register_get(path, MW(__VA_ARGS__), __VA_ARGS__)
+#define get(app, path, ...) \
+  ecewo_register_get(app, path, MW(__VA_ARGS__), __VA_ARGS__)
 
-#define post(path, ...) \
-  ecewo_register_post(path, MW(__VA_ARGS__), __VA_ARGS__)
+#define post(app, path, ...) \
+  ecewo_register_post(app, path, MW(__VA_ARGS__), __VA_ARGS__)
 
-#define put(path, ...) \
-  ecewo_register_put(path, MW(__VA_ARGS__), __VA_ARGS__)
+#define put(app, path, ...) \
+  ecewo_register_put(app, path, MW(__VA_ARGS__), __VA_ARGS__)
 
-#define patch(path, ...) \
-  ecewo_register_patch(path, MW(__VA_ARGS__), __VA_ARGS__)
+#define patch(app, path, ...) \
+  ecewo_register_patch(app, path, MW(__VA_ARGS__), __VA_ARGS__)
 
-#define del(path, ...) \
-  ecewo_register_del(path, MW(__VA_ARGS__), __VA_ARGS__)
+#define del(app, path, ...) \
+  ecewo_register_del(app, path, MW(__VA_ARGS__), __VA_ARGS__)
 
-#define head(path, ...) \
-  ecewo_register_headl(path, MW(__VA_ARGS__), __VA_ARGS__)
+#define head(app, path, ...) \
+  ecewo_register_headl(app, path, MW(__VA_ARGS__), __VA_ARGS__)
 
-#define options(path, ...) \
-  ecewo_register_options(path, MW(__VA_ARGS__), __VA_ARGS__)
+#define options(app, path, ...) \
+  ecewo_register_options(app, path, MW(__VA_ARGS__), __VA_ARGS__)
 
 // Called for each chunk of body data.
 typedef void (*BodyDataCb)(Req *req, const uint8_t *data, size_t len);
@@ -348,8 +365,8 @@ int connection_takeover(Res *res, const TakeoverConfig *config);
 uv_tcp_t *get_client_handle(Res *res);
 
 // DEBUG FUNCTIONS
-bool server_is_running(void);
-int get_active_connections(void);
+bool server_is_running(App *app);
+int server_active_connections(App *app);
 
 #ifdef __cplusplus
 }

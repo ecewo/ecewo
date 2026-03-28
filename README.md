@@ -38,19 +38,20 @@ void hello_world(Req *req, Res *res) {
 }
 
 int main(void) {
-  if (server_init() != 0) {
+  App *app = ecewo();
+  if (!app) {
     fprintf(stderr, "Failed to initialize server\n");
     return -1;
   }
 
-  get("/", hello_world);
+  get(app, "/", hello_world);
 
-  if (server_listen(3000) != 0) {
+  if (server_listen(app, 3000) != 0) {
     fprintf(stderr, "Failed to start server\n");
     return -1;
   }
 
-  server_run();
+  server_run(app);
   return 0;
 }
 ```
@@ -65,7 +66,7 @@ include(FetchContent)
 FetchContent_Declare(
   ecewo
   GIT_REPOSITORY https://github.com/ecewo/ecewo.git
-  GIT_TAG v3.6.1
+  GIT_TAG v4.0.0
 )
 
 FetchContent_MakeAvailable(ecewo)

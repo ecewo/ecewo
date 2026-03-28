@@ -104,9 +104,9 @@ int test_middleware_abort(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/mw-order", middleware_first, middleware_second, middleware_third, handler_middleware_order);
-  get("/mw-abort", middleware_abort, handler_should_not_reach);
+static void setup_routes(App *app) {
+  get(app, "/mw-order", middleware_first, middleware_second, middleware_third, handler_middleware_order);
+  get(app, "/mw-abort", middleware_abort, handler_should_not_reach);
 }
 
 int main(void) {

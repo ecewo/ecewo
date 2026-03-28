@@ -88,14 +88,14 @@ int test_path_use_skipped_for_nonmatching(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  use(global_tag_mw);
-  use("/use-api", api_tag_mw);
+static void setup_routes(App *app) {
+  use(app, global_tag_mw);
+  use(app, "/use-api", api_tag_mw);
 
-  get("/use-public", tag_handler);
-  get("/use-api", tag_handler);
-  get("/use-api/data", tag_handler);
-  get("/use-apiv2", tag_handler);
+  get(app, "/use-public", tag_handler);
+  get(app, "/use-api", tag_handler);
+  get(app, "/use-api/data", tag_handler);
+  get(app, "/use-apiv2", tag_handler);
 }
 
 int main(void) {

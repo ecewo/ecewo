@@ -84,9 +84,9 @@ int test_spawn_fire_and_forget(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  post("/background", handler_fire_and_forget);
-  get("/check-counter", handler_check_counter);
+static void setup_routes(App *app) {
+  post(app, "/background", handler_fire_and_forget);
+  get(app, "/check-counter", handler_check_counter);
 }
 
 int main(void) {

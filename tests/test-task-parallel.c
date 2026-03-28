@@ -94,8 +94,8 @@ int test_spawn_parallel(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/parallel", handler_parallel);
+static void setup_routes(App *app) {
+  get(app, "/parallel", handler_parallel);
 }
 
 int main(void) {

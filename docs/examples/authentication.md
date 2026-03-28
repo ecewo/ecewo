@@ -86,14 +86,14 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    server_init();
+    App *app = ecewo();
     session_init();
 
-    post("/login", handle_login);
+    post(app, "/login", handle_login);
 
-    server_atexit(cleanup_app);
-    server_listen(3000);
-    server_run();
+    server_atexit(app, cleanup_app);
+    server_listen(app, 3000);
+    server_run(app);
     return 0;
 }
 ```
@@ -146,15 +146,15 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    server_init();
+    App *app = ecewo();
     session_init();
 
-    post("/login", handle_login);
-    get("/logout", handle_logout); // We also added it
+    post(app, "/login", handle_login);
+    get(app, "/logout", handle_logout); // We also added it
 
-    server_atexit(cleanup_app);
-    server_listen(3000);
-    server_run();
+    server_atexit(app, cleanup_app);
+    server_listen(app, 3000);
+    server_run(app);
     return 0;
 }
 ```
@@ -232,16 +232,16 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    server_init();
+    App *app = ecewo();
     session_init();
 
-    get("/session", handle_session_data); // We added it now
-    post("/login", handle_login);
-    post("/logout", handle_logout);
+    get(app, "/session", handle_session_data); // We added it now
+    post(app, "/login", handle_login);
+    post(app, "/logout", handle_logout);
 
-    server_atexit(cleanup_app);
-    server_listen(3000);
-    server_run();
+    server_atexit(app, cleanup_app);
+    server_listen(app, 3000);
+    server_run(app);
     return 0;
 }
 ```
@@ -297,17 +297,17 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    server_init();
+    App *app = ecewo();
     session_init();
 
-    get("/protected", handle_protected_route); // We added it now
-    get("/session", handle_session_data);
-    post("/login", handle_login);
-    post("/logout", handle_logout);
+    get(app, "/protected", handle_protected_route); // We added it now
+    get(app, "/session", handle_session_data);
+    post(app, "/login", handle_login);
+    post(app, "/logout", handle_logout);
 
-    server_atexit(cleanup_app);
-    server_listen(3000);
-    server_run();
+    server_atexit(app, cleanup_app);
+    server_listen(app, 3000);
+    server_run(app);
     return 0;
 }
 ```

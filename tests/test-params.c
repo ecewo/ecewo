@@ -131,10 +131,10 @@ int test_overflow_param(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/param/:id1/:id2/:id3/:id4/:id5/:id6/:id7/:id8/:id9/:id10", handler_overflow_param);
-  get("/users/:userId/posts/:postId/comments/:commentId", handler_multi_param);
-  get("/users/:userId", handler_single_param);
+static void setup_routes(App *app) {
+  get(app, "/param/:id1/:id2/:id3/:id4/:id5/:id6/:id7/:id8/:id9/:id10", handler_overflow_param);
+  get(app, "/users/:userId/posts/:postId/comments/:commentId", handler_multi_param);
+  get(app, "/users/:userId", handler_single_param);
 }
 
 int main(void) {

@@ -51,8 +51,8 @@ int test_sequential_requests(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/counter", handler_counter);
+static void setup_routes(App *app) {
+  get(app, "/counter", handler_counter);
 }
 
 int main(void) {

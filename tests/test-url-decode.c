@@ -51,10 +51,10 @@ static void param_and_query_handler(Req *req, Res *res) {
   send_text(res, 200, response);
 }
 
-static void setup_routes(void) {
-  get("/users/:name", param_handler);
-  get("/search", search_handler);
-  get("/users/:name/search", param_and_query_handler);
+static void setup_routes(App *app) {
+  get(app, "/users/:name", param_handler);
+  get(app, "/search", search_handler);
+  get(app, "/users/:name/search", param_and_query_handler);
 }
 
 // -------------------------------------------------------------------------

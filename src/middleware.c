@@ -33,10 +33,6 @@ typedef struct {
   uint16_t current;
 } Chain;
 
-GlobalMiddlewareEntry *global_middleware = NULL;
-uint16_t global_middleware_count = 0;
-uint16_t global_middleware_capacity = 0;
-
 static bool path_matches_prefix(const char *prefix, const char *req_path) {
   if (!prefix)
     return true;
@@ -72,15 +68,17 @@ static void execute_next(Req *req, Res *res) {
   }
 }
 
-void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info) {
+void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, struct server_t *srv) {
   if (!req || !res || !middleware_info || !middleware_info->handler)
     return;
 
   uint16_t matching_global = 0;
 
-  for (uint16_t i = 0; i < global_middleware_count; i++) {
-    if (path_matches_prefix(global_middleware[i].path_prefix, req->path))
-      matching_global++;
+  if (srv) {
+    for (uint16_t i = 0; i < srv->global_middleware_count; i++) {
+      if (path_matches_prefix(srv->global_middleware[i].path_prefix, req->path))
+        matching_global++;
+    }
   }
 
   int total_middleware_count = matching_global + middleware_info->middleware_count;
@@ -100,9 +98,11 @@ void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info) {
 
   int idx = 0;
 
-  for (uint16_t i = 0; i < global_middleware_count; i++) {
-    if (path_matches_prefix(global_middleware[i].path_prefix, req->path))
-      combined_handlers[idx++] = global_middleware[i].handler;
+  if (srv) {
+    for (uint16_t i = 0; i < srv->global_middleware_count; i++) {
+      if (path_matches_prefix(srv->global_middleware[i].path_prefix, req->path))
+        combined_handlers[idx++] = srv->global_middleware[i].handler;
+    }
   }
 
   if (middleware_info->middleware_count > 0 && middleware_info->middleware) {
@@ -128,43 +128,45 @@ void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info) {
   execute_next(req, res);
 }
 
-void ecewo_register_use(const char *path, MiddlewareHandler middleware_handler) {
+void ecewo_register_use(App *app, const char *path, MiddlewareHandler middleware_handler) {
   if (!middleware_handler) {
     LOG_ERROR("NULL middleware handler");
     abort();
   }
 
-  if (global_middleware_count >= global_middleware_capacity) {
-    int new_cap = global_middleware_capacity ? global_middleware_capacity * 2 : INITIAL_MW_CAPACITY;
-    GlobalMiddlewareEntry *tmp = realloc(global_middleware, new_cap * sizeof *tmp);
+  if (!app || !app->internal) {
+    LOG_ERROR("NULL app in ecewo_register_use");
+    abort();
+  }
+
+  struct server_t *srv = app->internal;
+
+  if (srv->global_middleware_count >= srv->global_middleware_capacity) {
+    int new_cap = srv->global_middleware_capacity
+        ? srv->global_middleware_capacity * 2
+        : INITIAL_MW_CAPACITY;
+    GlobalMiddlewareEntry *tmp = realloc(srv->global_middleware, new_cap * sizeof *tmp);
     if (!tmp) {
       LOG_ERROR("Reallocation failed in global middleware");
       abort();
     }
-    global_middleware = tmp;
-    global_middleware_capacity = new_cap;
+    srv->global_middleware = tmp;
+    srv->global_middleware_capacity = new_cap;
   }
 
-  global_middleware[global_middleware_count].path_prefix = path;
-  global_middleware[global_middleware_count].handler = middleware_handler;
-  global_middleware_count++;
+  srv->global_middleware[srv->global_middleware_count].path_prefix = path;
+  srv->global_middleware[srv->global_middleware_count].handler = middleware_handler;
+  srv->global_middleware_count++;
 }
 
-void reset_middleware(void) {
-  if (global_middleware) {
-    free(global_middleware);
-    global_middleware = NULL;
-  }
-  global_middleware_count = 0;
-  global_middleware_capacity = 0;
-}
+void reset_middleware(struct server_t *srv) {
+  if (!srv)
+    return;
 
-void free_middleware_info(MiddlewareInfo *info) {
-  if (info) {
-    if (info->middleware) {
-      free(info->middleware);
-      info->middleware = NULL;
-    }
-    free(info);
+  if (srv->global_middleware) {
+    free(srv->global_middleware);
+    srv->global_middleware = NULL;
   }
+  srv->global_middleware_count = 0;
+  srv->global_middleware_capacity = 0;
 }

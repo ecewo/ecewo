@@ -84,8 +84,8 @@ int test_query_no_params(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/search", handler_query_params);
+static void setup_routes(App *app) {
+  get(app, "/search", handler_query_params);
 }
 
 int main(void) {

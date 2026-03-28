@@ -30,33 +30,11 @@
 #include "utils.h"
 #include "logger.h"
 
-#ifndef MAX_CONNECTIONS
-#define MAX_CONNECTIONS 10000
-#endif
-
-#ifndef LISTEN_BACKLOG
-#define LISTEN_BACKLOG 511
-#endif
-
-#ifndef IDLE_TIMEOUT_MS
-#define IDLE_TIMEOUT_MS 60000
-#endif
-
-#ifndef REQUEST_TIMEOUT_MS
-#define REQUEST_TIMEOUT_MS 0 /* disabled by default, configure via CMake */
-#endif
-
-#ifndef CLEANUP_INTERVAL_MS
-#define CLEANUP_INTERVAL_MS 30000
-#endif
-
-#ifndef SHUTDOWN_TIMEOUT_MS
-#define SHUTDOWN_TIMEOUT_MS 15000
-#endif
-
-#ifndef CLEANUP_TIMEOUT_MS
-#define CLEANUP_TIMEOUT_MS 5000
-#endif
+// Global pointer to the current server instance.
+// Used by functions called from handlers that have no direct app reference
+// (set_timeout, set_interval, get_loop, increment/decrement_async_work).
+// TODO: We might need to add the app param to those functions too
+static struct server_t *g_srv = NULL;
 
 typedef enum {
   SERVER_OK = 0,
@@ -75,31 +53,6 @@ typedef struct timer_data_s {
   void *user_data;
   bool is_interval;
 } timer_data_t;
-
-static struct {
-  bool initialized;
-  bool running;
-  bool shutdown_requested;
-  int active_connections;
-  atomic_uint_fast16_t async_work_count;
-
-  uv_loop_t *loop;
-  uv_tcp_t *server;
-  uv_signal_t sigint_handle;
-  uv_signal_t sigterm_handle;
-  uv_async_t shutdown_async;
-  uv_async_t async_work_handle; // unreffed while idle; ref'd while async_work_count > 0
-
-  shutdown_callback_t shutdown_callback;
-
-  client_t *client_list_head;
-  uv_timer_t *cleanup_timer;
-  uv_timer_t *force_close_timer;
-
-  bool server_closed;
-} ecewo_server = { 0 };
-
-route_table_t *route_table = NULL;
 
 static void client_free_internal(client_t *client) {
   if (!client)
@@ -123,21 +76,21 @@ void client_unref(client_t *client) {
     client_free_internal(client);
 }
 
-static void add_client_to_list(client_t *client) {
-  client->next = ecewo_server.client_list_head;
-  ecewo_server.client_list_head = client;
+static void add_client_to_list(struct server_t *srv, client_t *client) {
+  client->next = srv->client_list_head;
+  srv->client_list_head = client;
 }
 
-static void remove_client_from_list(client_t *client) {
+static void remove_client_from_list(struct server_t *srv, client_t *client) {
   if (!client)
     return;
 
-  if (ecewo_server.client_list_head == client) {
-    ecewo_server.client_list_head = client->next;
+  if (srv->client_list_head == client) {
+    srv->client_list_head = client->next;
     return;
   }
 
-  client_t *current = ecewo_server.client_list_head;
+  client_t *current = srv->client_list_head;
   while (current && current->next != client) {
     current = current->next;
   }
@@ -151,29 +104,27 @@ static void on_client_closed(uv_handle_t *handle) {
   if (!client)
     return;
 
-  remove_client_from_list(client);
-  if (ecewo_server.active_connections > 0)
-    ecewo_server.active_connections--;
+  struct server_t *srv = client->srv;
+  if (srv) {
+    remove_client_from_list(srv, client);
+    if (srv->active_connections > 0)
+      srv->active_connections--;
+
+    if (srv->shutdown_requested && srv->active_connections == 0
+        && srv->force_close_timer) {
+      uv_timer_stop(srv->force_close_timer);
+      uv_close((uv_handle_t *)srv->force_close_timer, (uv_close_cb)free);
+      srv->force_close_timer = NULL;
+    }
+  }
 
   client->valid = false;
 
   client_unref(client);
-
-  // If shutdown is in progress and this was the last connection,
-  // cancel the force-close timer early so the loop can exit.
-  if (ecewo_server.shutdown_requested
-      && ecewo_server.active_connections == 0
-      && ecewo_server.force_close_timer) {
-    uv_timer_stop(ecewo_server.force_close_timer);
-    uv_close((uv_handle_t *)ecewo_server.force_close_timer, (uv_close_cb)free);
-    ecewo_server.force_close_timer = NULL;
-  }
 }
 
 // Called when the write-side shutdown completes or is cancelled.
 // Drain mode keeps the read side alive until the peer closes.
-// Fixes the issue when closing a socket that
-// still has unread data in its receive buffer
 static void on_drain_shutdown(uv_shutdown_t *req, int status) {
   client_t *client = (client_t *)req->data;
   free(req);
@@ -184,7 +135,6 @@ static void on_drain_shutdown(uv_shutdown_t *req, int status) {
   }
 
   if (status < 0) {
-    // Close directly.
     client->draining = false;
     uv_read_stop((uv_stream_t *)&client->handle);
     uv_close((uv_handle_t *)&client->handle, on_client_closed);
@@ -222,7 +172,6 @@ static void close_client(client_t *client) {
         client_ref(client); // on_drain_shutdown releases it
         return;
       }
-      // uv_shutdown failed, fall through to direct close
       free(req);
     }
 
@@ -232,13 +181,13 @@ static void close_client(client_t *client) {
 }
 
 static void cleanup_idle_connections(uv_timer_t *handle) {
-  (void)handle;
-
-  if (ecewo_server.shutdown_requested)
+  struct server_t *srv = (struct server_t *)handle->data;
+  if (!srv || srv->shutdown_requested)
     return;
 
-  uint64_t now = uv_now(ecewo_server.loop);
-  client_t *current = ecewo_server.client_list_head;
+  uint64_t idle_timeout = srv->app->idle_timeout_ms;
+  uint64_t now = uv_now(srv->loop);
+  client_t *current = srv->client_list_head;
 
   while (current) {
     client_t *next = current->next;
@@ -250,44 +199,71 @@ static void cleanup_idle_connections(uv_timer_t *handle) {
 
     if (current->keep_alive_enabled && !current->closing) {
       uint64_t idle_time = now - current->last_activity;
-
-      if (idle_time > IDLE_TIMEOUT_MS)
+      if (idle_time > idle_timeout)
         close_client(current);
     }
     current = next;
   }
 }
 
-static int start_cleanup_timer(void) {
-  ecewo_server.cleanup_timer = malloc(sizeof(uv_timer_t));
-  if (!ecewo_server.cleanup_timer)
+static int start_cleanup_timer(struct server_t *srv) {
+  srv->cleanup_timer = malloc(sizeof(uv_timer_t));
+  if (!srv->cleanup_timer)
     return -1;
 
-  if (uv_timer_init(ecewo_server.loop, ecewo_server.cleanup_timer) != 0) {
-    free(ecewo_server.cleanup_timer);
-    ecewo_server.cleanup_timer = NULL;
+  if (uv_timer_init(srv->loop, srv->cleanup_timer) != 0) {
+    free(srv->cleanup_timer);
+    srv->cleanup_timer = NULL;
     return -1;
   }
 
-  if (uv_timer_start(ecewo_server.cleanup_timer, cleanup_idle_connections,
-                     CLEANUP_INTERVAL_MS, CLEANUP_INTERVAL_MS)
-      != 0) {
-    uv_close((uv_handle_t *)ecewo_server.cleanup_timer, (uv_close_cb)free);
-    ecewo_server.cleanup_timer = NULL;
+  srv->cleanup_timer->data = srv;
+
+  uint64_t interval = srv->app->cleanup_interval_ms;
+  if (uv_timer_start(srv->cleanup_timer, cleanup_idle_connections, interval, interval) != 0) {
+    uv_close((uv_handle_t *)srv->cleanup_timer, (uv_close_cb)free);
+    srv->cleanup_timer = NULL;
     return -1;
   }
 
   return 0;
 }
 
-static void stop_cleanup_timer(void) {
-  if (ecewo_server.cleanup_timer) {
-    uv_timer_stop(ecewo_server.cleanup_timer);
-    uv_close((uv_handle_t *)ecewo_server.cleanup_timer, (uv_close_cb)free);
-    ecewo_server.cleanup_timer = NULL;
+static void stop_cleanup_timer(struct server_t *srv) {
+  if (srv->cleanup_timer) {
+    uv_timer_stop(srv->cleanup_timer);
+    uv_close((uv_handle_t *)srv->cleanup_timer, (uv_close_cb)free);
+    srv->cleanup_timer = NULL;
   }
 }
 
+void increment_async_work(void) {
+  if (!g_srv)
+    return;
+
+  uint_fast16_t prev = atomic_fetch_add_explicit(
+      &g_srv->async_work_count, 1, memory_order_relaxed);
+
+  if (prev == 0)
+    uv_ref((uv_handle_t *)&g_srv->async_work_handle);
+}
+
+void decrement_async_work(void) {
+  if (!g_srv)
+    return;
+
+  uint_fast16_t prev = atomic_fetch_sub_explicit(
+      &g_srv->async_work_count, 1, memory_order_acq_rel);
+
+  if (prev == 0) {
+    LOG_ERROR("Async work counter underflow!");
+    atomic_store_explicit(&g_srv->async_work_count, 0, memory_order_release);
+    return;
+  }
+
+  if (prev == 1)
+    uv_unref((uv_handle_t *)&g_srv->async_work_handle);
+}
 
 static int client_connection_init(client_t *client) {
   if (!client)
@@ -374,11 +350,11 @@ static void close_walk_cb(uv_handle_t *handle, void *arg) {
 }
 
 static void on_server_closed(uv_handle_t *handle) {
-  (void)handle;
-  if (ecewo_server.server) {
-    free(ecewo_server.server);
-    ecewo_server.server = NULL;
-    ecewo_server.server_closed = 1;
+  struct server_t *srv = (struct server_t *)handle->data;
+  free(handle);
+  if (srv) {
+    srv->tcp_server = NULL;
+    srv->server_closed = true;
   }
 }
 
@@ -386,31 +362,16 @@ static void on_async_work_noop(uv_async_t *handle) {
   (void)handle;
 }
 
-void increment_async_work(void) {
-  uint_fast16_t prev = atomic_fetch_add_explicit(
-      &ecewo_server.async_work_count, 1, memory_order_relaxed);
-  if (prev == 0)
-    uv_ref((uv_handle_t *)&ecewo_server.async_work_handle);
-}
-
-void decrement_async_work(void) {
-  uint_fast16_t prev = atomic_fetch_sub_explicit(
-      &ecewo_server.async_work_count, 1, memory_order_acq_rel);
-  if (prev == 0) {
-    LOG_ERROR("Async work counter underflow!");
-    atomic_store_explicit(&ecewo_server.async_work_count, 0, memory_order_release);
-    return;
-  }
-  if (prev == 1)
-    uv_unref((uv_handle_t *)&ecewo_server.async_work_handle);
-}
-
 static void on_force_close_timeout(uv_timer_t *handle) {
+  struct server_t *srv = (struct server_t *)handle->data;
   uv_timer_stop(handle);
   uv_close((uv_handle_t *)handle, (uv_close_cb)free);
-  ecewo_server.force_close_timer = NULL;
+  if (!srv)
+    return;
 
-  client_t *current = ecewo_server.client_list_head;
+  srv->force_close_timer = NULL;
+
+  client_t *current = srv->client_list_head;
   while (current) {
     client_t *next = current->next;
     if (!current->closing && !uv_is_closing((uv_handle_t *)&current->handle))
@@ -419,44 +380,50 @@ static void on_force_close_timeout(uv_timer_t *handle) {
   }
 }
 
-void server_shutdown(void) {
-  if (ecewo_server.shutdown_requested)
+void server_shutdown(App *app) {
+  if (!app || !app->internal)
     return;
 
-  ecewo_server.shutdown_requested = true;
-  ecewo_server.running = false;
+  struct server_t *srv = app->internal;
 
-  // Stop accepting new connections
-  if (ecewo_server.server && !uv_is_closing((uv_handle_t *)ecewo_server.server))
-    uv_close((uv_handle_t *)ecewo_server.server, on_server_closed);
+  if (srv->shutdown_requested)
+    return;
 
-  // Unref the cleanup timer so it no longer prevents the loop from exiting.
-  // It will be fully closed in server_cleanup() after uv_run() returns.
-  if (ecewo_server.cleanup_timer)
-    uv_unref((uv_handle_t *)ecewo_server.cleanup_timer);
+  srv->shutdown_requested = true;
+  srv->running = false;
+
+  // Stop accepting new connections first.
+  if (srv->tcp_server && !uv_is_closing((uv_handle_t *)srv->tcp_server)) {
+    srv->tcp_server->data = srv;
+    uv_close((uv_handle_t *)srv->tcp_server, on_server_closed);
+  }
+
+  // Unref cleanup timer so it no longer keeps the loop alive.
+  // stop_cleanup_timer() in server_cleanup() will fully close it.
+  if (srv->cleanup_timer)
+    uv_unref((uv_handle_t *)srv->cleanup_timer);
 
   const char *is_worker = getenv("ECEWO_WORKER");
   bool in_cluster = (is_worker && strcmp(is_worker, "1") == 0);
 
   if (!in_cluster) {
-    if (!uv_is_closing((uv_handle_t *)&ecewo_server.sigint_handle)) {
-      uv_signal_stop(&ecewo_server.sigint_handle);
-      uv_close((uv_handle_t *)&ecewo_server.sigint_handle, NULL);
+    if (!uv_is_closing((uv_handle_t *)&srv->sigint_handle)) {
+      uv_signal_stop(&srv->sigint_handle);
+      uv_close((uv_handle_t *)&srv->sigint_handle, NULL);
     }
 
-    if (!uv_is_closing((uv_handle_t *)&ecewo_server.sigterm_handle)) {
-      uv_signal_stop(&ecewo_server.sigterm_handle);
-      uv_close((uv_handle_t *)&ecewo_server.sigterm_handle, NULL);
+    if (!uv_is_closing((uv_handle_t *)&srv->sigterm_handle)) {
+      uv_signal_stop(&srv->sigterm_handle);
+      uv_close((uv_handle_t *)&srv->sigterm_handle, NULL);
     }
   }
 
-  if (!uv_is_closing((uv_handle_t *)&ecewo_server.shutdown_async))
-    uv_close((uv_handle_t *)&ecewo_server.shutdown_async, NULL);
+  if (!uv_is_closing((uv_handle_t *)&srv->shutdown_async))
+    uv_close((uv_handle_t *)&srv->shutdown_async, NULL);
 
-  // Close idle connections immediately. In-progress connections close
-  // themselves when their request finishes. The force-close timer is the
-  // backstop for anything that takes too long.
-  client_t *current = ecewo_server.client_list_head;
+  // Close idle connections immediately; in-progress ones close themselves
+  // when their request finishes. The force-close timer is the backstop.
+  client_t *current = srv->client_list_head;
   while (current) {
     client_t *next = current->next;
     if (!current->request_in_progress && !current->closing)
@@ -464,30 +431,104 @@ void server_shutdown(void) {
     current = next;
   }
 
-  // Arm a hard timeout only if connections are still open.
-  // on_client_closed() cancels it early if all connections drain before it fires.
-  if (ecewo_server.active_connections > 0) {
-    ecewo_server.force_close_timer = malloc(sizeof(uv_timer_t));
-    if (ecewo_server.force_close_timer) {
-      uv_timer_init(ecewo_server.loop, ecewo_server.force_close_timer);
-      uv_timer_start(ecewo_server.force_close_timer,
-                     on_force_close_timeout,
-                     SHUTDOWN_TIMEOUT_MS, 0);
+  // Arm a hard timeout as backstop for connections that take too long.
+  // on_client_closed() cancels it early once all connections drain.
+  if (srv->active_connections > 0) {
+    srv->force_close_timer = malloc(sizeof(uv_timer_t));
+    if (srv->force_close_timer) {
+      uv_timer_init(srv->loop, srv->force_close_timer);
+      srv->force_close_timer->data = srv;
+      uv_timer_start(srv->force_close_timer, on_force_close_timeout,
+                     srv->app->shutdown_timeout_ms, 0);
     }
   }
 
   // Return immediately. The outer uv_run() in server_run() exits naturally
-  // once all handles (clients, spawn uv_async_t, force-close timer) are closed.
+  // once all handles (clients, force-close timer, async_work_handle) are
+  // closed or unreffed.
 }
 
-static void router_cleanup(void) {
-  if (route_table) {
-    // Middleware contexts will be cleaned up in route_table_free
-    route_table_free(route_table);
-    route_table = NULL;
+#ifdef ECEWO_DEBUG
+static void inspect_loop(uv_loop_t *loop);
+#endif
+
+static void server_cleanup(struct server_t *srv) {
+  if (!srv || !srv->initialized)
+    return;
+
+  if (!srv->shutdown_requested)
+    server_shutdown(srv->app);
+
+  // uv_run() has returned — all in-progress requests are done.
+  // Safe to call the user's shutdown callback while the loop is still valid.
+  if (srv->shutdown_callback)
+    srv->shutdown_callback();
+
+  // Fully close the cleanup timer (was only unref'd in server_shutdown).
+  stop_cleanup_timer(srv);
+
+  // Final walk to close any handles that slipped through.
+  uv_walk(srv->loop, close_walk_cb, NULL);
+  while (uv_run(srv->loop, UV_RUN_DEFAULT) != 0)
+    ;
+
+  // Router cleanup
+  if (srv->route_table) {
+    route_table_free(srv->route_table);
+    srv->route_table = NULL;
   }
 
-  reset_middleware();
+  reset_middleware(srv);
+
+  if (srv->app && srv->app->arena) {
+    arena_return(srv->app->arena);
+    srv->app->arena = NULL;
+  }
+
+  arena_pool_destroy();
+  destroy_date_cache();
+
+#ifdef ECEWO_DEBUG
+  inspect_loop(srv->loop);
+#endif
+
+  int result = uv_loop_close(srv->loop);
+  if (result != 0)
+    LOG_ERROR("uv_loop_close failed: %s", uv_strerror(result));
+
+  if (srv->tcp_server && !srv->server_closed)
+    free(srv->tcp_server);
+
+  free(srv->loop);
+  srv->loop = NULL;
+  srv->initialized = false;
+}
+
+static void global_server_cleanup(void) {
+  if (g_srv)
+    server_cleanup(g_srv);
+}
+
+static void on_async_shutdown(uv_async_t *handle) {
+  struct server_t *srv = (struct server_t *)handle->data;
+  if (srv)
+    server_shutdown(srv->app);
+}
+
+static void on_signal(uv_signal_t *handle, int signum) {
+  struct server_t *srv = (struct server_t *)handle->data;
+
+  if (!srv || srv->shutdown_requested)
+    return;
+
+#ifdef ECEWO_DEBUG
+  const char *signal_name = (signum == SIGINT) ? "SIGINT" : "SIGTERM";
+  LOG_DEBUG("Received %s, shutting down...", signal_name);
+#else
+  (void)signum;
+#endif
+
+  uv_async_send(&srv->shutdown_async);
 }
 
 int connection_takeover(Res *res, const TakeoverConfig *config) {
@@ -592,133 +633,6 @@ static void inspect_loop(uv_loop_t *loop) {
 }
 #endif
 
-static void server_cleanup(void) {
-  if (!ecewo_server.initialized)
-    return;
-
-  if (!ecewo_server.shutdown_requested)
-    server_shutdown();
-
-  // The outer uv_run() has returned; all active handles are closed.
-  // Call the user's shutdown callback while the loop pointer is still valid.
-  if (ecewo_server.shutdown_callback)
-    ecewo_server.shutdown_callback();
-
-  // Fully close the cleanup timer (it was only unreffed in server_shutdown).
-  stop_cleanup_timer();
-
-  // Close anything the shutdown path may have missed, then drain close callbacks.
-  uv_walk(ecewo_server.loop, close_walk_cb, NULL);
-  while (uv_run(ecewo_server.loop, UV_RUN_DEFAULT) != 0)
-    ;
-
-  router_cleanup();
-  arena_pool_destroy();
-  destroy_date_cache();
-
-#ifdef ECEWO_DEBUG
-  inspect_loop(ecewo_server.loop);
-#endif
-
-  int result = uv_loop_close(ecewo_server.loop);
-  if (result != 0) {
-    LOG_ERROR("uv_loop_close failed: %s", uv_strerror(result));
-#ifdef ECEWO_DEBUG
-    inspect_loop(ecewo_server.loop);
-#endif
-  }
-
-  if (ecewo_server.server && !ecewo_server.server_closed)
-    free(ecewo_server.server);
-
-  free(ecewo_server.loop);
-  memset(&ecewo_server, 0, sizeof(ecewo_server));
-}
-
-static void on_async_shutdown(uv_async_t *handle) {
-  (void)handle;
-  server_shutdown();
-}
-
-static void on_signal(uv_signal_t *handle, int signum) {
-  (void)handle;
-
-  if (ecewo_server.shutdown_requested)
-    return;
-
-#ifdef ECEWO_DEBUG
-  const char *signal_name = (signum == SIGINT) ? "SIGINT" : "SIGTERM";
-  LOG_DEBUG("Received %s, shutting down...", signal_name);
-#else
-  (void)signum;
-#endif
-
-  uv_async_send(&ecewo_server.shutdown_async);
-}
-
-static int router_init(void) {
-  if (route_table)
-    return 0;
-
-  route_table = route_table_create();
-  if (!route_table) {
-    LOG_ERROR("Failed to create route trie");
-    return 1;
-  }
-
-  return 0;
-}
-
-int server_init(void) {
-  if (ecewo_server.initialized)
-    return SERVER_ALREADY_INITIALIZED;
-
-  memset(&ecewo_server, 0, sizeof(ecewo_server));
-
-  ecewo_server.loop = malloc(sizeof(uv_loop_t));
-  if (!ecewo_server.loop)
-    return SERVER_INIT_FAILED;
-
-  uv_loop_init(ecewo_server.loop);
-
-  arena_pool_init();
-
-  if (!arena_pool_is_initialized()) {
-    LOG_ERROR("Arena pool initialization failed");
-    return SERVER_INIT_FAILED;
-  }
-
-  init_date_cache();
-
-  const char *is_worker = getenv("ECEWO_WORKER");
-  bool in_cluster = (is_worker && strcmp(is_worker, "1") == 0);
-
-  if (!in_cluster) {
-    if (uv_signal_init(ecewo_server.loop, &ecewo_server.sigint_handle) != 0 || uv_signal_init(ecewo_server.loop, &ecewo_server.sigterm_handle) != 0) {
-      return SERVER_INIT_FAILED;
-    }
-
-    uv_signal_start(&ecewo_server.sigint_handle, on_signal, SIGINT);
-    uv_signal_start(&ecewo_server.sigterm_handle, on_signal, SIGTERM);
-  }
-
-  if (uv_async_init(ecewo_server.loop, &ecewo_server.shutdown_async, on_async_shutdown) != 0)
-    return SERVER_INIT_FAILED;
-
-  if (uv_async_init(ecewo_server.loop, &ecewo_server.async_work_handle, on_async_work_noop) != 0)
-    return SERVER_INIT_FAILED;
-  uv_unref((uv_handle_t *)&ecewo_server.async_work_handle);
-  atomic_store_explicit(&ecewo_server.async_work_count, 0, memory_order_relaxed);
-
-  if (router_init() != 0)
-    return SERVER_INIT_FAILED;
-
-  ecewo_server.initialized = 1;
-  atexit(server_cleanup);
-
-  return SERVER_OK;
-}
-
 static void on_request_timeout(uv_timer_t *handle) {
   client_t *client = (client_t *)handle->data;
 
@@ -749,7 +663,7 @@ int request_timeout(Res *res, uint64_t timeout_ms) {
 
   client_t *client = (client_t *)res->client_socket->data;
 
-  if (!client || client->closing)
+  if (!client || client->closing || !client->srv)
     return -1;
 
   if (client->request_timeout_timer) {
@@ -763,7 +677,7 @@ int request_timeout(Res *res, uint64_t timeout_ms) {
   if (!client->request_timeout_timer)
     return -1;
 
-  if (uv_timer_init(ecewo_server.loop, client->request_timeout_timer) != 0) {
+  if (uv_timer_init(client->srv->loop, client->request_timeout_timer) != 0) {
     free(client->request_timeout_timer);
     client->request_timeout_timer = NULL;
     return -1;
@@ -789,7 +703,8 @@ void server_alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *b
   (void)suggested_size;
   client_t *client = (client_t *)handle->data;
 
-  if (!client || (client->closing && !client->draining) || ecewo_server.shutdown_requested) {
+  if (!client || (client->closing && !client->draining)
+      || (client->srv && client->srv->shutdown_requested)) {
     buf->base = NULL;
     buf->len = 0;
     return;
@@ -804,10 +719,8 @@ void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
   if (!client)
     return;
 
-  // Discard all incoming data to empty the receive buffer.
-  // This prevents Windows from sending a connection reset
-  // when we close a socket that still has unread receive data
-  // (which would discard our response).
+  struct server_t *srv = client->srv;
+
   if (client->draining) {
     if (nread < 0) {
       uv_read_stop(stream);
@@ -820,7 +733,7 @@ void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
   if (client->closing)
     return;
 
-  if (ecewo_server.shutdown_requested) {
+  if (srv && srv->shutdown_requested) {
     close_client(client);
     return;
   }
@@ -831,58 +744,55 @@ void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
   }
 
   if (nread == 0)
-    return; // EAGAIN/EWOULDBLOCK
+    return;
 
-  client->last_activity = uv_now(ecewo_server.loop);
+  client->last_activity = srv ? uv_now(srv->loop) : 0;
 
-  // Initialize parser only once per connection
   if (!client->parser_initialized) {
     client_parser_init(client);
     client_context_init(client);
     client->request_in_progress = false;
   }
 
-  // Only reset context when starting a NEW request
-  // Don't reset if we're continuing a partial request
   if (!client->request_in_progress) {
     client_context_reset(client);
     client->request_in_progress = true;
 
-#if REQUEST_TIMEOUT_MS > 0
-    if (client->request_timeout_timer) {
-      uv_timer_start(client->request_timeout_timer, on_request_timeout, REQUEST_TIMEOUT_MS, 0);
-    } else {
-      client->request_timeout_timer = malloc(sizeof(uv_timer_t));
+    // Start per-request timeout if configured
+    if (srv && srv->app && srv->app->request_timeout_ms > 0) {
       if (client->request_timeout_timer) {
-        if (uv_timer_init(ecewo_server.loop, client->request_timeout_timer) == 0) {
-          client->request_timeout_timer->data = client;
-
-          if (uv_timer_start(client->request_timeout_timer,
-                             on_request_timeout,
-                             REQUEST_TIMEOUT_MS,
-                             0)
-              != 0) {
-            uv_close((uv_handle_t *)client->request_timeout_timer, (uv_close_cb)free);
+        uv_timer_start(client->request_timeout_timer,
+                       on_request_timeout,
+                       srv->app->request_timeout_ms,
+                       0);
+      } else {
+        client->request_timeout_timer = malloc(sizeof(uv_timer_t));
+        if (client->request_timeout_timer) {
+          if (uv_timer_init(srv->loop, client->request_timeout_timer) == 0) {
+            client->request_timeout_timer->data = client;
+            if (uv_timer_start(client->request_timeout_timer,
+                               on_request_timeout,
+                               srv->app->request_timeout_ms,
+                               0)
+                != 0) {
+              uv_close((uv_handle_t *)client->request_timeout_timer, (uv_close_cb)free);
+              client->request_timeout_timer = NULL;
+            }
+          } else {
+            free(client->request_timeout_timer);
             client->request_timeout_timer = NULL;
           }
-        } else {
-          free(client->request_timeout_timer);
-          client->request_timeout_timer = NULL;
         }
       }
     }
-#endif
   }
 
   if (buf && buf->base) {
-    // Hold an extra reference so the client cannot be freed by router()'s
-    // own client_unref() before we finish the post-router switch below.
     client_ref(client);
     int result = router(client, buf->base, (size_t)nread);
 
     switch (result) {
     case REQUEST_KEEP_ALIVE:
-      // The timer is stopped for async responses by write_completion_cb in response.c
       stop_request_timer(client);
       client->keep_alive_enabled = true;
       break;
@@ -892,10 +802,6 @@ void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
       break;
 
     case REQUEST_PENDING:
-      // It may be PARSE_INCOMPLETE, need to wait for more data
-      // or may be an async operation, or body paused
-      // request_in_progress should stay true
-      // do not close, do not reset
       break;
 
     default:
@@ -908,18 +814,20 @@ void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
 }
 
 static void on_connection(uv_stream_t *server, int status) {
-  (void)server;
-
   if (status < 0) {
     LOG_ERROR("Connection error");
     return;
   }
 
-  if (ecewo_server.shutdown_requested)
+  struct server_t *srv = (struct server_t *)server->data;
+  if (!srv)
     return;
 
-  if (ecewo_server.active_connections >= MAX_CONNECTIONS) {
-    LOG_DEBUG("Max connections (%d) reached", MAX_CONNECTIONS);
+  if (srv->shutdown_requested)
+    return;
+
+  if (srv->active_connections >= srv->app->max_connections) {
+    LOG_DEBUG("Max connections (%d) reached", srv->app->max_connections);
     return;
   }
 
@@ -928,12 +836,13 @@ static void on_connection(uv_stream_t *server, int status) {
     return;
 
   client->valid = true;
-  client->last_activity = uv_now(ecewo_server.loop);
+  client->last_activity = uv_now(srv->loop);
   client->keep_alive_enabled = false;
   client->next = NULL;
   client->parser_initialized = false;
   client->request_in_progress = false;
   client->connection_arena = NULL;
+  client->srv = srv;
 
   atomic_init(&client->refcount, 1);
 
@@ -942,10 +851,9 @@ static void on_connection(uv_stream_t *server, int status) {
     return;
   }
 
-  if (uv_tcp_init(ecewo_server.loop, &client->handle) != 0) {
+  if (uv_tcp_init(srv->loop, &client->handle) != 0) {
     if (client->connection_arena)
       arena_return(client->connection_arena);
-
     free(client);
     return;
   }
@@ -960,8 +868,8 @@ static void on_connection(uv_stream_t *server, int status) {
                       server_alloc_buffer,
                       server_on_read)
         == 0) {
-      add_client_to_list(client);
-      ecewo_server.active_connections++;
+      add_client_to_list(srv, client);
+      srv->active_connections++;
     } else {
       close_client(client);
     }
@@ -970,29 +878,146 @@ static void on_connection(uv_stream_t *server, int status) {
   }
 }
 
-int server_listen(uint16_t port) {
+App *ecewo(void) {
+  App *app = calloc(1, sizeof(App));
+  if (!app)
+    return NULL;
+
+  app->max_connections = 10000;
+  app->listen_backlog = 511;
+  app->idle_timeout_ms = 60000;
+  app->request_timeout_ms = 0;
+  app->cleanup_interval_ms = 30000;
+  app->shutdown_timeout_ms = 15000;
+
+  struct server_t *srv = calloc(1, sizeof(struct server_t));
+  if (!srv) {
+    free(app);
+    return NULL;
+  }
+
+  srv->app = app;
+  app->internal = srv;
+
+  srv->loop = malloc(sizeof(uv_loop_t));
+  if (!srv->loop) {
+    free(srv);
+    free(app);
+    return NULL;
+  }
+
+  uv_loop_init(srv->loop);
+
+  arena_pool_init();
+
+  if (!arena_pool_is_initialized()) {
+    LOG_ERROR("Arena pool initialization failed");
+    free(srv->loop);
+    free(srv);
+    free(app);
+    return NULL;
+  }
+
+  app->arena = arena_borrow();
+  if (!app->arena) {
+    LOG_ERROR("App arena allocation failed");
+    arena_pool_destroy();
+    free(srv->loop);
+    free(srv);
+    free(app);
+    return NULL;
+  }
+
+  init_date_cache();
+
+  const char *is_worker = getenv("ECEWO_WORKER");
+  bool in_cluster = (is_worker && strcmp(is_worker, "1") == 0);
+
+  if (!in_cluster) {
+    if (uv_signal_init(srv->loop, &srv->sigint_handle) != 0
+        || uv_signal_init(srv->loop, &srv->sigterm_handle) != 0) {
+      free(srv->loop);
+      free(srv);
+      free(app);
+      return NULL;
+    }
+
+    srv->sigint_handle.data = srv;
+    srv->sigterm_handle.data = srv;
+
+    uv_signal_start(&srv->sigint_handle, on_signal, SIGINT);
+    uv_signal_start(&srv->sigterm_handle, on_signal, SIGTERM);
+  }
+
+  if (uv_async_init(srv->loop, &srv->shutdown_async, on_async_shutdown) != 0) {
+    free(srv->loop);
+    free(srv);
+    free(app);
+    return NULL;
+  }
+
+  srv->shutdown_async.data = srv;
+
+  if (uv_async_init(srv->loop, &srv->async_work_handle, on_async_work_noop) != 0) {
+    free(srv->loop);
+    free(srv);
+    free(app);
+    return NULL;
+  }
+
+  // Unreffed by default, only refedd while async work is in flight
+  uv_unref((uv_handle_t *)&srv->async_work_handle);
+
+  atomic_init(&srv->async_work_count, 0);
+
+  srv->route_table = route_table_create();
+  if (!srv->route_table) {
+    LOG_ERROR("Failed to create route table");
+    free(srv->loop);
+    free(srv);
+    free(app);
+    return NULL;
+  }
+
+  srv->initialized = true;
+
+  g_srv = srv;
+  atexit(global_server_cleanup);
+
+  return app;
+}
+
+int server_listen(App *app, uint16_t port) {
+  if (!app || !app->internal)
+    return SERVER_NOT_INITIALIZED;
+
+  struct server_t *srv = app->internal;
+
   if (port == 0) {
     LOG_ERROR("Invalid port %" PRIu16 " (must be 1-65535)", port);
     return SERVER_INVALID_PORT;
   }
 
-  if (!ecewo_server.initialized)
+  if (!srv->initialized)
     return SERVER_NOT_INITIALIZED;
 
-  if (ecewo_server.running)
+  if (srv->running)
     return SERVER_ALREADY_RUNNING;
 
-  ecewo_server.server = malloc(sizeof(uv_tcp_t));
-  if (!ecewo_server.server)
+  srv->tcp_server = malloc(sizeof(uv_tcp_t));
+  if (!srv->tcp_server)
     return SERVER_OUT_OF_MEMORY;
 
-  if (uv_tcp_init(ecewo_server.loop, ecewo_server.server) != 0) {
-    free(ecewo_server.server);
-    ecewo_server.server = NULL;
+  if (uv_tcp_init(srv->loop, srv->tcp_server) != 0) {
+    free(srv->tcp_server);
+    srv->tcp_server = NULL;
     return SERVER_INIT_FAILED;
   }
 
-  uv_tcp_simultaneous_accepts(ecewo_server.server, 1);
+  // Store srv in the tcp server handle so on_connection can retrieve it
+  srv->tcp_server->data = srv;
+
+  uv_tcp_simultaneous_accepts(srv->tcp_server, 1);
 
   struct sockaddr_in addr;
   uv_ip4_addr("0.0.0.0", port, &addr);
@@ -1003,22 +1028,22 @@ int server_listen(uint16_t port) {
   flags = UV_TCP_REUSEPORT;
 #endif
 
-  if (uv_tcp_bind(ecewo_server.server, (const struct sockaddr *)&addr, flags) != 0) {
-    uv_close((uv_handle_t *)ecewo_server.server, on_server_closed);
+  if (uv_tcp_bind(srv->tcp_server, (const struct sockaddr *)&addr, flags) != 0) {
+    uv_close((uv_handle_t *)srv->tcp_server, on_server_closed);
     LOG_ERROR("Failed to bind to port %" PRIu16 " (may be in use)", port);
     return SERVER_BIND_FAILED;
   }
 
-  if (uv_listen((uv_stream_t *)ecewo_server.server, LISTEN_BACKLOG, on_connection) != 0) {
-    uv_close((uv_handle_t *)ecewo_server.server, on_server_closed);
+  if (uv_listen((uv_stream_t *)srv->tcp_server, srv->app->listen_backlog, on_connection) != 0) {
+    uv_close((uv_handle_t *)srv->tcp_server, on_server_closed);
     LOG_ERROR("Failed to listen on port %" PRIu16, port);
     return SERVER_LISTEN_FAILED;
   }
 
-  if (start_cleanup_timer() != 0)
+  if (start_cleanup_timer(srv) != 0)
     LOG_DEBUG("Failed to start cleanup timer");
 
-  ecewo_server.running = 1;
+  srv->running = true;
 
   const char *is_worker = getenv("ECEWO_WORKER");
   if (!is_worker || strcmp(is_worker, "1") != 0)
@@ -1027,31 +1052,44 @@ int server_listen(uint16_t port) {
   return SERVER_OK;
 }
 
-void server_run(void) {
-  if (!ecewo_server.initialized || !ecewo_server.running) {
+void server_run(App *app) {
+  if (!app || !app->internal)
+    return;
+
+  struct server_t *srv = app->internal;
+
+  if (!srv->initialized || !srv->running) {
     LOG_ERROR("Server not initialized or not listening");
     return;
   }
 
-  uv_run(ecewo_server.loop, UV_RUN_DEFAULT);
+  uv_run(srv->loop, UV_RUN_DEFAULT);
 
-  server_cleanup();
+  server_cleanup(srv);
 }
 
-void server_atexit(shutdown_callback_t callback) {
-  ecewo_server.shutdown_callback = callback;
+void server_atexit(App *app, shutdown_callback_t callback) {
+  if (app && app->internal)
+    app->internal->shutdown_callback = callback;
 }
 
-bool server_is_running(void) {
-  return ecewo_server.running;
+bool server_is_running(App *app) {
+  return app && app->internal ? app->internal->running : false;
 }
 
-int get_active_connections(void) {
-  return ecewo_server.active_connections;
+int server_active_connections(App *app) {
+  return app && app->internal ? app->internal->active_connections : 0;
+}
+
+int server_pending_async_work(App *app) {
+  if (!app || !app->internal)
+    return 0;
+  return (int)atomic_load_explicit(&app->internal->async_work_count,
+                                   memory_order_acquire);
 }
 
 uv_loop_t *get_loop(void) {
-  return ecewo_server.loop;
+  return g_srv ? g_srv->loop : NULL;
 }
 
 static void timer_callback(uv_timer_t *handle) {
@@ -1068,7 +1106,7 @@ static void timer_callback(uv_timer_t *handle) {
 }
 
 Timer *set_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data) {
-  if (!ecewo_server.initialized || !callback)
+  if (!g_srv || !g_srv->initialized || !callback)
     return NULL;
 
   Timer *timer = malloc(sizeof(Timer));
@@ -1084,7 +1122,7 @@ Timer *set_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data
   data->user_data = user_data;
   data->is_interval = false;
 
-  if (uv_timer_init(ecewo_server.loop, timer) != 0) {
+  if (uv_timer_init(g_srv->loop, timer) != 0) {
     free(timer);
     free(data);
     return NULL;
@@ -1102,7 +1140,7 @@ Timer *set_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data
 }
 
 Timer *set_interval(timer_callback_t callback, uint64_t interval_ms, void *user_data) {
-  if (!ecewo_server.initialized || !callback)
+  if (!g_srv || !g_srv->initialized || !callback)
     return NULL;
 
   Timer *timer = malloc(sizeof(Timer));
@@ -1118,7 +1156,7 @@ Timer *set_interval(timer_callback_t callback, uint64_t interval_ms, void *user_
   data->user_data = user_data;
   data->is_interval = true;
 
-  if (uv_timer_init(ecewo_server.loop, timer) != 0) {
+  if (uv_timer_init(g_srv->loop, timer) != 0) {
     free(timer);
     free(data);
     return NULL;

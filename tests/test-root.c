@@ -44,8 +44,8 @@ int test_root_path(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/", handler_root);
+static void setup_routes(App *app) {
+  get(app, "/", handler_root);
 }
 
 int main(void) {

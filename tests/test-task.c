@@ -65,8 +65,8 @@ int test_spawn_with_response(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/compute", handler_compute);
+static void setup_routes(App *app) {
+  get(app, "/compute", handler_compute);
 }
 
 int main(void) {

@@ -88,10 +88,10 @@ int test_redirect_injection(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/old-path", handler_redirect);
-  get("/new-location", handler_new_location);
-  get("/redirect-injection", handler_redirect_injection);
+static void setup_routes(App *app) {
+  get(app, "/old-path", handler_redirect);
+  get(app, "/new-location", handler_new_location);
+  get(app, "/redirect-injection", handler_redirect_injection);
 }
 
 int main(void) {

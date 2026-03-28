@@ -16,9 +16,4 @@ make format
 - Editing and adding documentation
 - Writing tests
 
-There are some possible optimaziton opportunities:
-
-- Using `malloc`/`free` is still necessary in some parts of the core and plugins, so it might be useful to have a global server arena where we can store all the persistent memory coming from plugins.
-- Body streaming is needed for huge uploads (like videos).
-
 **Thank you for your contribution <3**

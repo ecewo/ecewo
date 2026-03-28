@@ -325,11 +325,6 @@ static void route_node_free(route_node_t *node) {
     return;
 
   for (int i = 0; i < METHOD_COUNT; i++) {
-    if (node->middleware_ctx[i])
-      free_middleware_info((MiddlewareInfo *)node->middleware_ctx[i]);
-    if (node->wildcard_middleware_ctx[i])
-      free_middleware_info((MiddlewareInfo *)node->wildcard_middleware_ctx[i]);
-
     if (node->route_param_names[i]) {
       for (uint8_t j = 0; j < node->route_param_count[i]; j++)
         free(node->route_param_names[i][j]);
@@ -551,8 +546,6 @@ int route_table_add(route_table_t *table,
         }
       }
 
-      if (node->wildcard_middleware_ctx[method_idx])
-        free_middleware_info((MiddlewareInfo *)node->wildcard_middleware_ctx[method_idx]);
       // Free old wildcard param names if re-registering
       if (node->wildcard_param_names[method_idx]) {
         for (uint8_t j = 0; j < node->wildcard_param_count[method_idx]; j++)
@@ -643,8 +636,6 @@ int route_table_add(route_table_t *table,
     }
   }
 
-  if (node->middleware_ctx[method_idx])
-    free_middleware_info((MiddlewareInfo *)node->middleware_ctx[method_idx]);
   if (node->route_param_names[method_idx]) {
     for (uint8_t j = 0; j < node->route_param_count[method_idx]; j++)
       free(node->route_param_names[method_idx][j]);

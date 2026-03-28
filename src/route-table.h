@@ -43,8 +43,6 @@ typedef struct {
 
 typedef struct route_table route_table_t;
 
-extern route_table_t *route_table;
-
 typedef struct {
   const char *data;
   size_t len;

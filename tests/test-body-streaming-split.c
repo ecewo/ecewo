@@ -81,8 +81,8 @@ static void handler(Req *req, Res *res) {
   body_on_end(req, res, on_end);
 }
 
-static void setup_routes(void) {
-  post("/streaming-split", body_stream, handler);
+static void setup_routes(App *app) {
+  post(app, "/streaming-split", body_stream, handler);
 }
 
 // Send headers and body as two separate TCP writes with a 50 ms gap to force

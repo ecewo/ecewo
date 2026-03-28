@@ -72,7 +72,7 @@ format-file:
 	@clang-format -i $(FILE)
 
 lint:
-	find src src/utils -name "*.c" | xargs clang-tidy -p build --quiet
+	find src -name "*.c" | xargs clang-tidy -p build
 
 lint-fix:
 	@echo "Running clang-tidy with auto-fix..."

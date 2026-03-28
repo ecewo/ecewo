@@ -120,10 +120,10 @@ int test_header_injection(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/headers", handler_echo_headers);
-  get("/custom-headers", handler_set_headers);
-  get("/header-injection", handler_header_injection);
+static void setup_routes(App *app) {
+  get(app, "/headers", handler_echo_headers);
+  get(app, "/custom-headers", handler_set_headers);
+  get(app, "/header-injection", handler_header_injection);
 }
 
 int main(void) {

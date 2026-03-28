@@ -64,24 +64,24 @@ static void static_handler(Req *req, Res *res) {
   send_text(res, 202, "static");
 }
 
-static void setup_routes(void) {
+static void setup_routes(App *app) {
   // 10 specific same-depth routes registered FIRST
-  get("/a/:id", specific_handler);
-  get("/b/:id", specific_handler);
-  get("/c/:id", specific_handler);
-  get("/d/:id", specific_handler);
-  get("/e/:id", specific_handler);
-  get("/f/:id", specific_handler);
-  get("/g/:id", specific_handler);
-  get("/h/:id", specific_handler);
-  get("/i/:id", specific_handler);
-  get("/j/:id", specific_handler);
+  get(app, "/a/:id", specific_handler);
+  get(app, "/b/:id", specific_handler);
+  get(app, "/c/:id", specific_handler);
+  get(app, "/d/:id", specific_handler);
+  get(app, "/e/:id", specific_handler);
+  get(app, "/f/:id", specific_handler);
+  get(app, "/g/:id", specific_handler);
+  get(app, "/h/:id", specific_handler);
+  get(app, "/i/:id", specific_handler);
+  get(app, "/j/:id", specific_handler);
 
   // Static route registered after the dynamic ones; must still win (rule 1)
-  get("/a/admin", static_handler);
+  get(app, "/a/admin", static_handler);
 
   // Generic catch-all registered LAST; loses to all specific ones (rule 2)
-  get("/:category/:id", generic_handler);
+  get(app, "/:category/:id", generic_handler);
 }
 
 // --- test helpers --------------------------------------------------------

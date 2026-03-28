@@ -144,10 +144,10 @@ int test_404_wrong_method(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/json-response", handler_json_response);
-  get("/html-response", handler_html_response);
-  get("/status", handler_status_codes);
+static void setup_routes(App *app) {
+  get(app, "/json-response", handler_json_response);
+  get(app, "/html-response", handler_html_response);
+  get(app, "/status", handler_status_codes);
 }
 
 int main(void) {

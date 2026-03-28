@@ -228,11 +228,11 @@ int test_sync_blocking(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/thread-test", handler_thread_test);
-  get("/main-thread", handler_get_main_thread);
-  get("/fast", handler_fast);
-  get("/slow", handler_slow);
+static void setup_routes(App *app) {
+  get(app, "/thread-test", handler_thread_test);
+  get(app, "/main-thread", handler_get_main_thread);
+  get(app, "/fast", handler_fast);
+  get(app, "/slow", handler_slow);
 }
 
 int main(void) {

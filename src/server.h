@@ -24,6 +24,8 @@
 
 #include "ecewo.h"
 #include "http.h"
+#include "middleware.h"
+#include "route-table.h"
 #include "uv.h"
 #include "llhttp.h"
 #include <stdatomic.h>
@@ -31,6 +33,30 @@
 #ifndef READ_BUFFER_SIZE
 #define READ_BUFFER_SIZE 16384
 #endif
+
+struct server_t {
+  App *app;
+  bool initialized;
+  bool running;
+  bool shutdown_requested;
+  bool server_closed;
+  int active_connections;
+  atomic_uint_fast16_t async_work_count;
+  uv_loop_t *loop;
+  uv_tcp_t *tcp_server;
+  uv_signal_t sigint_handle;
+  uv_signal_t sigterm_handle;
+  uv_async_t shutdown_async;
+  uv_async_t async_work_handle; // unreffed while idle, reffed while async_work_count > 0
+  shutdown_callback_t shutdown_callback;
+  client_t *client_list_head;
+  uv_timer_t *cleanup_timer;
+  uv_timer_t *force_close_timer;
+  route_table_t *route_table;
+  GlobalMiddlewareEntry *global_middleware;
+  uint16_t global_middleware_count;
+  uint16_t global_middleware_capacity;
+};
 
 struct client_s {
   uv_tcp_t handle;
@@ -71,6 +97,9 @@ struct client_s {
   // instead of dispatching a fresh one.
   Req *stream_req;
   Res *stream_res;
+
+  // Pointer back to the server that owns this client
+  struct server_t *srv;
 };
 
 void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);

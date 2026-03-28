@@ -72,9 +72,9 @@ int test_normal_body(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  post("/large-body", handler_body);
-  post("/normal-body", handler_body);
+static void setup_routes(App *app) {
+  post(app, "/large-body", handler_body);
+  post(app, "/normal-body", handler_body);
 }
 
 int main(void) {

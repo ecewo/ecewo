@@ -119,8 +119,8 @@ int test_async_auth_no_token(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/mw-async", middleware_async_auth, handler_protected);
+static void setup_routes(App *app) {
+  get(app, "/mw-async", middleware_async_auth, handler_protected);
 }
 
 int main(void) {

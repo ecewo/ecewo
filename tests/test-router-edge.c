@@ -53,10 +53,10 @@ static void encoded_handler(Req *req, Res *res) {
   send_text(res, 200, "encoded");
 }
 
-static void setup_routes(void) {
-  get("/:", bare_colon_handler);
-  get("/prefix/*/suffix", wildcard_mid_handler);
-  get("/encoded%2Fpath", encoded_handler);
+static void setup_routes(App *app) {
+  get(app, "/:", bare_colon_handler);
+  get(app, "/prefix/*/suffix", wildcard_mid_handler);
+  get(app, "/encoded%2Fpath", encoded_handler);
 }
 
 // -------------------------------------------------------------------------

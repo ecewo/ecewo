@@ -132,10 +132,10 @@ int test_size_limit(void) {
 }
 
 
-static void setup_routes(void) {
-  post("/streaming", body_stream, handler_streaming_test);
-  post("/buffered", handler_buffered);
-  post("/size-limit", body_stream, handler_size_limit);
+static void setup_routes(App *app) {
+  post(app, "/streaming", body_stream, handler_streaming_test);
+  post(app, "/buffered", handler_buffered);
+  post(app, "/size-limit", body_stream, handler_size_limit);
 }
 
 int main(void) {

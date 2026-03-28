@@ -116,10 +116,10 @@ static int wildcard_test(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/", handler);
-  get("/users/:id", handler);
-  get("/files/*", handler);
+static void setup_routes(App *app) {
+  get(app, "/", handler);
+  get(app, "/users/:id", handler);
+  get(app, "/files/*", handler);
 }
 
 int main(void) {

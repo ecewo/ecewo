@@ -40,11 +40,9 @@ typedef struct {
   MiddlewareHandler handler;
 } GlobalMiddlewareEntry;
 
-extern GlobalMiddlewareEntry *global_middleware;
-extern uint16_t global_middleware_count;
+struct server_t;
 
-void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info);
-void reset_middleware(void);
-void free_middleware_info(MiddlewareInfo *info);
+void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, struct server_t *srv);
+void reset_middleware(struct server_t *srv);
 
 #endif

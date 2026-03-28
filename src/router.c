@@ -33,7 +33,6 @@ extern void send_error(Arena *request_arena, uv_tcp_t *client_socket, int error_
 extern void body_stream_complete(Req *req);
 
 // Extracts URL parameters from a previously matched route
-// Example: From route /users/:id matched with /users/123, extracts parameter id=123
 static int extract_url_params(Arena *arena, const route_match_t *match, request_t *url_params) {
   if (!arena || !match || !url_params)
     return -1;
@@ -76,7 +75,7 @@ static int extract_url_params(Arena *arena, const route_match_t *match, request_
   return 0;
 }
 
-static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket) {
+static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket, struct server_t *srv) {
   if (!request_arena)
     return NULL;
 
@@ -89,12 +88,7 @@ static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket) {
   req->client_socket = client_socket;
   req->is_head_request = false;
   req->ctx = NULL;
-
-  // TODO: Something like body_ctx_init_fn might be useful
-  // for implementing hooks like fastify has
-  // but I'm not sure about that
-  // so I'll just leave a comment line
-  // body_ctx_init(req);
+  req->app = srv ? srv->app : NULL;
 
   return req;
 }
@@ -142,8 +136,6 @@ static int populate_req_from_context(Req *req, http_context_t *ctx, const char *
     req->path[path_len] = '\0';
   }
 
-  // Body only available in buffered mode at this point
-  // In streaming mode it arrives via on_body_chunk callbacks after resume
   if (ctx->body && ctx->body_length > 0) {
     req->body = arena_alloc(arena, ctx->body_length + 1);
     if (!req->body)
@@ -162,18 +154,23 @@ static int populate_req_from_context(Req *req, http_context_t *ctx, const char *
   return 0;
 }
 
-// Empty handler for running global middleware only
-// it is needed for OPTIONS preflight CORS
+// Empty handler for running global middleware only (OPTIONS preflight / CORS)
 static void noop_route_handler(Req *req, Res *res) {
   (void)req;
   (void)res;
 }
 
 // Matches a route and invokes the handler/middleware chain.
-// Returns 0 on success, -1 if a fatal error occurred (500 already sent).
-// req_out / res_out are set on success so the caller can inspect res->replied.
-static int dispatch(Arena *arena, uv_tcp_t *handle, http_context_t *ctx, client_t *client, const char *path, size_t path_len, Req **req_out, Res **res_out) {
-  Req *req = create_req(arena, handle);
+static int dispatch(struct server_t *srv,
+                    Arena *arena,
+                    uv_tcp_t *handle,
+                    http_context_t *ctx,
+                    client_t *client,
+                    const char *path,
+                    size_t path_len,
+                    Req **req_out,
+                    Res **res_out) {
+  Req *req = create_req(arena, handle, srv);
   Res *res = create_res(arena, handle);
   if (!req || !res) {
     send_error(arena, handle, 500);
@@ -194,7 +191,7 @@ static int dispatch(Arena *arena, uv_tcp_t *handle, http_context_t *ctx, client_
   if (res_out)
     *res_out = res;
 
-  if (!route_table || !ctx->method) {
+  if (!srv || !srv->route_table || !ctx->method) {
     set_header(res, "Content-Type", "text/plain");
     reply(res, 404, "404 Not Found", 13);
     return 0;
@@ -207,19 +204,17 @@ static int dispatch(Arena *arena, uv_tcp_t *handle, http_context_t *ctx, client_
   }
 
   route_match_t match;
-  if (!route_table_match(route_table, ctx->parser, &tok, &match, arena)) {
+  if (!route_table_match(srv->route_table, ctx->parser, &tok, &match, arena)) {
     // OPTIONS preflight: give global middleware a chance (e.g. CORS)
     if (ctx->method_length == 7 && memcmp(ctx->method, "OPTIONS", 7) == 0) {
       MiddlewareInfo dummy = { NULL, 0, noop_route_handler };
-      chain_start(req, res, &dummy);
+      chain_start(req, res, &dummy, srv);
       if (res->replied)
         return 0;
     }
 
-    uint8_t allowed = route_table_allowed_methods(route_table, &tok);
+    uint8_t allowed = route_table_allowed_methods(srv->route_table, &tok);
     if (allowed) {
-      // Build "Allow" header value
-      // Order matches http_method_index_t enum
       static const char *method_names[7] = {
         "DELETE", "GET", "HEAD", "POST", "PUT", "OPTIONS", "PATCH"
       };
@@ -268,9 +263,9 @@ static int dispatch(Arena *arena, uv_tcp_t *handle, http_context_t *ctx, client_
       }
     }
   }
-  if (!has_stream_middleware) {
-    for (uint16_t i = 0; i < global_middleware_count; i++) {
-      if ((void *)global_middleware[i].handler == (void *)body_stream) {
+  if (!has_stream_middleware && srv) {
+    for (uint16_t i = 0; i < srv->global_middleware_count; i++) {
+      if ((void *)srv->global_middleware[i].handler == (void *)body_stream) {
         has_stream_middleware = true;
         break;
       }
@@ -299,7 +294,6 @@ static int dispatch(Arena *arena, uv_tcp_t *handle, http_context_t *ctx, client_
     }
   }
 
-  // Deny large body if no streaming middleware
   if (!ctx->on_body_chunk && has_body && (content_length >= (long)BUFFERED_BODY_MAX_SIZE || is_chunked)) {
     set_header(res, "Content-Type", "text/plain");
     res->keep_alive = false;
@@ -324,7 +318,7 @@ static int dispatch(Arena *arena, uv_tcp_t *handle, http_context_t *ctx, client_
   }
 
   if (mw)
-    chain_start(req, res, mw);
+    chain_start(req, res, mw, srv);
   else
     match.handler(req, res);
 
@@ -338,10 +332,9 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     return REQUEST_CLOSE;
   }
 
-  // Hold a reference so the client cannot be freed while we are executing,
-  // even if a middleware or handler triggers server shutdown synchronously.
   client_ref(client);
 
+  struct server_t *srv = client->srv;
   uv_tcp_t *handle = (uv_tcp_t *)&client->handle;
   http_context_t *ctx = &client->persistent_context;
   Arena *arena = client->connection_arena;
@@ -351,10 +344,8 @@ int router(client_t *client, const char *request_data, size_t request_len) {
   if (uv_is_closing((uv_handle_t *)handle))
     goto done;
 
-  // Feed data
   parse_result_t result = http_parse_request(ctx, request_data, request_len);
 
-  // Headers complete, invoke handler
   if (result == PARSE_PAUSED) {
     if (!arena) {
       send_error(NULL, handle, 500);
@@ -371,13 +362,9 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     Req *req = NULL;
     Res *res = NULL;
 
-    if (dispatch(arena, handle, ctx, client, path, path_len, &req, &res) != 0)
+    if (dispatch(srv, arena, handle, ctx, client, path, path_len, &req, &res) != 0)
       goto done;
 
-    // A middleware or handler may have triggered server shutdown synchronously,
-    // causing on_client_closed() to run and mark the client invalid.
-    // ctx, arena, and res all alias into the client struct or its arena,
-    // so we must not touch them once the client has been invalidated.
     if (!client->valid)
       goto done;
 
@@ -403,14 +390,12 @@ int router(client_t *client, const char *request_data, size_t request_len) {
       goto done;
     }
 
-    // Handler wants the body, feed remaining bytes now
     parse_result_t body_result;
     if (left > 0)
       body_result = http_parse_request(ctx, pause_pos, left);
     else
       body_result = ctx->message_complete ? PARSE_SUCCESS : PARSE_INCOMPLETE;
 
-    // Result after resume
     switch (body_result) {
     case PARSE_SUCCESS:
       if (ctx->on_body_chunk && req) {
@@ -426,12 +411,11 @@ int router(client_t *client, const char *request_data, size_t request_len) {
           preq->body_len = ctx->body_length;
           MiddlewareInfo *pmw = (MiddlewareInfo *)client->pending_mw;
           if (pmw)
-            chain_start(preq, pres, pmw);
+            chain_start(preq, pres, pmw, srv);
           else if (client->pending_handler)
             client->pending_handler(preq, pres);
         }
       }
-      // Guard against shutdown triggered during body dispatch above
       if (!client->valid)
         goto done;
       {
@@ -447,7 +431,6 @@ int router(client_t *client, const char *request_data, size_t request_len) {
       goto done;
 
     case PARSE_INCOMPLETE:
-      // Body still arriving over the network, wait for more data
       retval = REQUEST_PENDING;
       goto done;
 
@@ -466,7 +449,6 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     }
   }
 
-  // Fallthrough: result before headers-complete
   switch (result) {
   case PARSE_INCOMPLETE:
     retval = REQUEST_PENDING;
@@ -483,7 +465,7 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     goto done;
 
   case PARSE_SUCCESS:
-    break; // EOF-terminated request completed without pausing
+    break;
 
   default:
     send_error(NULL, handle, 400);
@@ -493,7 +475,7 @@ int router(client_t *client, const char *request_data, size_t request_len) {
   // A streaming request whose body arrived across multiple TCP reads:
   // the first TCP read parsed headers and started dispatch but the body
   // was not yet complete (PARSE_INCOMPLETE), so body_stream_complete was
-  // deferred. Call the complete cb on the saved req 
+  // deferred. Call the complete cb on the saved req
   // instead of dispatching a fresh req/res
   if (ctx->on_body_chunk && client->stream_req) {
     Req *sreq = client->stream_req;
@@ -504,8 +486,8 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     if (!client->valid)
       goto done;
     retval = (sres && !sres->replied)
-                 ? REQUEST_PENDING
-                 : (sres && sres->keep_alive ? REQUEST_KEEP_ALIVE : REQUEST_CLOSE);
+        ? REQUEST_PENDING
+        : (sres && sres->keep_alive ? REQUEST_KEEP_ALIVE : REQUEST_CLOSE);
     goto done;
   }
 
@@ -534,7 +516,7 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     Req *req = NULL;
     Res *res = NULL;
 
-    if (dispatch(arena, handle, ctx, client, path, path_len, &req, &res) != 0)
+    if (dispatch(srv, arena, handle, ctx, client, path, path_len, &req, &res) != 0)
       goto done;
 
     if (!client->valid)

@@ -111,12 +111,12 @@ int test_method_patch(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/method", handler_body);
-  post("/method", handler_body);
-  put("/method", handler_body);
-  del("/method", handler_body);
-  patch("/method", handler_body);
+static void setup_routes(App *app) {
+  get(app, "/method", handler_body);
+  post(app, "/method", handler_body);
+  put(app, "/method", handler_body);
+  del(app, "/method", handler_body);
+  patch(app, "/method", handler_body);
 }
 
 int main(void) {

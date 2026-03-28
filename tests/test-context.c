@@ -338,15 +338,15 @@ int test_context_unauthorized(void) {
   RETURN_OK();
 }
 
-static void setup_routes(void) {
-  get("/context", context_middleware, context_handler);
-  get("/no-middleware", handler_no_middleware);
-  get("/nonexistent-key", handler_nonexistent_key);
-  get("/overwrite", handler_overwrite);
-  get("/multiple-keys", handler_multiple_keys);
-  get("/null-data", handler_null_data);
-  get("/chain-context", middleware_first_ctx, middleware_second_ctx, handler_chain_context);
-  get("/complex-data", handler_complex_data);
+static void setup_routes(App *app) {
+  get(app, "/context", context_middleware, context_handler);
+  get(app, "/no-middleware", handler_no_middleware);
+  get(app, "/nonexistent-key", handler_nonexistent_key);
+  get(app, "/overwrite", handler_overwrite);
+  get(app, "/multiple-keys", handler_multiple_keys);
+  get(app, "/null-data", handler_null_data);
+  get(app, "/chain-context", middleware_first_ctx, middleware_second_ctx, handler_chain_context);
+  get(app, "/complex-data", handler_complex_data);
 }
 
 int main(void) {
