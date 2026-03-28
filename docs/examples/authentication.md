@@ -22,14 +22,14 @@ void handle_login(Req *req, Res *res) {
    const char *body = req->body;
    if (!body)
    {
-      send_text(res, 400, "Missing request body");
+      ecewo_send_text(res, 400, "Missing request body");
       return;
    }
 
    cJSON *json = cJSON_Parse(body);
    if (!json)
    {
-      send_text(res, 400, "Invalid JSON");
+      ecewo_send_text(res, 400, "Invalid JSON");
       return;
    }
 
@@ -39,7 +39,7 @@ void handle_login(Req *req, Res *res) {
    if (!username || !password)
    {
       cJSON_Delete(json);
-      send_text(res, 400, "Missing fields");
+      ecewo_send_text(res, 400, "Missing fields");
       return;
    }
 
@@ -69,11 +69,11 @@ void handle_login(Req *req, Res *res) {
       session_send(res, session, &cookie_options);
 
       printf("Session ID: %s\n", session->id);
-      send_text(res, 200, "Login successful!");
+      ecewo_send_text(res, 200, "Login successful!");
    }
    else
    {
-      send_text(res, 401, "Invalid username or password");
+      ecewo_send_text(res, 401, "Invalid username or password");
    }
 
    cJSON_Delete(json);
@@ -86,14 +86,14 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo();
+    App *app = ecewo_create();
     session_init();
 
-    post(app, "/login", handle_login);
+    ECEWO_POST(app, "/login", handle_login);
 
-    server_atexit(app, cleanup_app);
-    server_listen(app, 3000);
-    server_run(app);
+    ecewo_atexit(app, cleanup_app);
+    ecewo_listen(app, 3000);
+    ecewo_run(app);
     return 0;
 }
 ```
@@ -123,7 +123,7 @@ void handle_logout(Req *req, Res *res) {
     Session *session = session_get(req);
 
     if (!session) {
-        send_text(res, 400, "You have to login first");
+        ecewo_send_text(res, 400, "You have to login first");
     }
     else
     {
@@ -137,7 +137,7 @@ void handle_logout(Req *req, Res *res) {
         };
 
         session_destroy(res, session, &cookie_options);
-        send_text(res, 200, "Logged out");
+        ecewo_send_text(res, 200, "Logged out");
     }
 }
 
@@ -146,15 +146,15 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo();
+    App *app = ecewo_create();
     session_init();
 
-    post(app, "/login", handle_login);
-    get(app, "/logout", handle_logout); // We also added it
+    ECEWO_POST(app, "/login", handle_login);
+    ECEWO_GET(app, "/logout", handle_logout); // We also added it
 
-    server_atexit(app, cleanup_app);
-    server_listen(app, 3000);
-    server_run(app);
+    ecewo_atexit(app, cleanup_app);
+    ecewo_listen(app, 3000);
+    ecewo_run(app);
     return 0;
 }
 ```
@@ -191,7 +191,7 @@ void handle_session_data(Req *req, Res *res) {
 
    if (!session)
    {
-      send_text(res, 401, "Error: Authentication required");
+      ecewo_send_text(res, 401, "Error: Authentication required");
       return;
    }
 
@@ -223,7 +223,7 @@ void handle_session_data(Req *req, Res *res) {
       free(theme); // Free the memory!
    }
 
-   send_text(res, OK, "Check out the console!");
+   ecewo_send_text(res, OK, "Check out the console!");
 }
 
 
@@ -232,16 +232,16 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo();
+    App *app = ecewo_create();
     session_init();
 
-    get(app, "/session", handle_session_data); // We added it now
-    post(app, "/login", handle_login);
-    post(app, "/logout", handle_logout);
+    ECEWO_GET(app, "/session", handle_session_data); // We added it now
+    ECEWO_POST(app, "/login", handle_login);
+    ECEWO_POST(app, "/logout", handle_logout);
 
-    server_atexit(app, cleanup_app);
-    server_listen(app, 3000);
-    server_run(app);
+    ecewo_atexit(app, cleanup_app);
+    ecewo_listen(app, 3000);
+    ecewo_run(app);
     return 0;
 }
 ```
@@ -272,7 +272,7 @@ void handle_protected_route(Req *req, Res *res) {
    if (!sess)
    {
       // No session, user not logged in
-      send_text(res, UNAUTHORIZED, "Error: Authentication required");
+      ecewo_send_text(res, UNAUTHORIZED, "Error: Authentication required");
       return;
    }
 
@@ -282,11 +282,11 @@ void handle_protected_route(Req *req, Res *res) {
    if (user_id && strcmp(user_id, STATIC_USER_ID) == 0)
    {
       char *welcome_message = arena_sprintf(res->arena, "Welcome, %s", STATIC_NAME);
-      send_text(res, OK, welcome_message);
+      ecewo_send_text(res, OK, welcome_message);
    }
    else
    {
-      send_text(res, FORBIDDEN, "You are not allowed to see this page.");
+      ecewo_send_text(res, FORBIDDEN, "You are not allowed to see this page.");
    }
 
    free(user_id);
@@ -297,17 +297,17 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo();
+    App *app = ecewo_create();
     session_init();
 
-    get(app, "/protected", handle_protected_route); // We added it now
-    get(app, "/session", handle_session_data);
-    post(app, "/login", handle_login);
-    post(app, "/logout", handle_logout);
+    ECEWO_GET(app, "/protected", handle_protected_route); // We added it now
+    ECEWO_GET(app, "/session", handle_session_data);
+    ECEWO_POST(app, "/login", handle_login);
+    ECEWO_POST(app, "/logout", handle_logout);
 
-    server_atexit(app, cleanup_app);
-    server_listen(app, 3000);
-    server_run(app);
+    ecewo_atexit(app, cleanup_app);
+    ecewo_listen(app, 3000);
+    ecewo_run(app);
     return 0;
 }
 ```

@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/ecewo/ecewo/main/img/ecewo.svg" />
   <h1>Express-C Effect for Web Operations</h1>
-  A web framework for C — inspired by <a href="https://expressjs.com">express.js</a>
+  Asynchronous web framework for C — inspired by <a href="https://expressjs.com">express.js</a>
 </div>
 
 ## Table of Contents
@@ -34,24 +34,24 @@
 #include <stdio.h>
 
 void hello_world(Req *req, Res *res) {
-  send_text(res, OK, "Hello, World!");
+  ecewo_send_text(res, OK, "Hello, World!");
 }
 
 int main(void) {
-  App *app = ecewo();
+  App *app = ecewo_create();
   if (!app) {
     fprintf(stderr, "Failed to initialize server\n");
     return -1;
   }
 
-  get(app, "/", hello_world);
+  ECEWO_GET(app, "/", hello_world);
 
-  if (server_listen(app, 3000) != 0) {
+  if (ecewo_listen(app, 3000) != 0) {
     fprintf(stderr, "Failed to start server\n");
     return -1;
   }
 
-  server_run(app);
+  ecewo_run(app);
   return 0;
 }
 ```

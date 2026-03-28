@@ -30,7 +30,7 @@ void hello_world(Req *req, Res *res) {
     char *json_string = cJSON_PrintUnformatted(json);
 
     // Send the json response with 200 status code
-    send_json(res, 200, json_string);
+    ecewo_send_json(res, 200, json_string);
 
     // Free the memory that allocated by cJSON
     cJSON_Delete(json);
@@ -38,19 +38,20 @@ void hello_world(Req *req, Res *res) {
 }
 
 int main(void) {
-    if (server_init() != 0) {
+    App *app = ecewo_create();
+    if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
     }
 
-    get("/", hello_world);
+    ECEWO_GET(app, "/", hello_world);
 
-    if (server_listen(3000) != 0) {
+    if (ecewo_listen(app, 3000) != 0) {
         fprintf(stderr, "Failed to start server\n");
         return 1;
     }
 
-    server_run();
+    ecewo_run(app);
     return 0;
 }
 ```
@@ -76,14 +77,14 @@ void handle_user(Req *req, Res *res) {
     const char *body = req->body;
 
     if (body == NULL) {
-        send_text(res, 400, "Missing request body");
+        ecewo_send_text(res, 400, "Missing request body");
         return;
     }
 
     cJSON *json = cJSON_Parse(body);
 
     if (!json) {
-        send_text(res, 400, "Invalid JSON");
+        ecewo_send_text(res, 400, "Invalid JSON");
         return;
     }
 
@@ -93,7 +94,7 @@ void handle_user(Req *req, Res *res) {
 
     if (!name || !surname || !username) {
         cJSON_Delete(json);
-        send_text(res, 400, "Missing fields");
+        ecewo_send_text(res, 400, "Missing fields");
         return;
     }
 
@@ -102,23 +103,24 @@ void handle_user(Req *req, Res *res) {
     printf("Username: %s\n", username);
 
     cJSON_Delete(json);
-    send_text(res, 200, "Success!");
+    ecewo_send_text(res, 200, "Success!");
 }
 
 int main(void) {
-    if (server_init() != 0) {
+    App *app = ecewo_create();
+    if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
     }
 
-    post("/user", handle_user);
+    ECEWO_POST(app, "/user", handle_user);
 
-    if (server_listen(3000) != 0) {
+    if (ecewo_listen(app, 3000) != 0) {
         fprintf(stderr, "Failed to start server\n");
         return 1;
     }
 
-    server_run();
+    ecewo_run(app);
     return 0;
 }
 ```

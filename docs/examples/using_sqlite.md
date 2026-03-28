@@ -174,7 +174,7 @@ void add_user_work(void *context) {
 // Callback function - runs on main thread
 void add_user_done(Res *res, void *context) {
     AddUserContext *ctx = (AddUserContext *)context;
-    send_text(res, ctx->status, ctx->message);
+    ecewo_send_text(res, ctx->status, ctx->message);
 }
 
 // Handler function - runs on main thread
@@ -182,14 +182,14 @@ void add_user(Req *req, Res *res) {
     const char *body = req->body;
 
     if (body == NULL) {
-        send_text(res, 400, "Missing request body");
+        ecewo_send_text(res, 400, "Missing request body");
         return;
     }
 
     cJSON *json = cJSON_Parse(body);
 
     if (!json) {
-        send_text(res, 400, "Invalid JSON");
+        ecewo_send_text(res, 400, "Invalid JSON");
         return;
     }
 
@@ -199,7 +199,7 @@ void add_user(Req *req, Res *res) {
 
     if (!name || !username || !password) {
         cJSON_Delete(json);
-        send_text(res, 400, "Missing fields");
+        ecewo_send_text(res, 400, "Missing fields");
         return;
     }
 
@@ -212,7 +212,7 @@ void add_user(Req *req, Res *res) {
     cJSON_Delete(json);
 
     // Spawn async work
-    spawn_http(res, ctx, add_user_work, add_user_done);
+    ecewo_spawn_http(res, ctx, add_user_work, add_user_done);
 }
 ```
 
@@ -297,12 +297,12 @@ void get_users_done(Res *res, void *context) {
     GetUsersContext *ctx = (GetUsersContext *)context;
 
     if (ctx->status != 200 || !ctx->json_array) {
-        send_text(res, ctx->status, ctx->error_message);
+        ecewo_send_text(res, ctx->status, ctx->error_message);
         return;
     }
 
     char *json_string = cJSON_PrintUnformatted(ctx->json_array);
-    send_json(res, 200, json_string);
+    ecewo_send_json(res, 200, json_string);
 
     cJSON_Delete(ctx->json_array);
     free(json_string);
@@ -315,7 +315,7 @@ void get_all_users(Req *req, Res *res) {
     ctx->status = 500;
     ctx->error_message = "Unknown error";
 
-    spawn_http(res, ctx, get_users_work, get_users_done);
+    ecewo_spawn_http(res, ctx, get_users_work, get_users_done);
 }
 
 // ... add_user functions from previous section ...
@@ -335,7 +335,8 @@ void destroy_app(void) {
 }
 
 int main(void) {
-    if (server_init() != 0) {
+    App *app = ecewo_create();
+    if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
     }
@@ -345,18 +346,18 @@ int main(void) {
         return 1;
     }
 
-    // Register routes with spawn() inside handlers
-    get("/users", get_all_users);
-    post("/user", add_user);
+    // Register routes with ecewo_spawn() inside handlers
+    ECEWO_GET(app, "/users", get_all_users);
+    ECEWO_POST(app, "/user", add_user);
 
-    server_atexit(destroy_app);
+    ecewo_atexit(app, destroy_app);
 
-    if (server_listen(3000) != 0) {
+    if (ecewo_listen(app, 3000) != 0) {
         fprintf(stderr, "Failed to start server\n");
         return 1;
     }
 
-    server_run();
+    ecewo_run(app);
     return 0;
 }
 ```
@@ -408,4 +409,4 @@ Now, let's query the users that we just added. If we send a `GET` request to `ht
 
 > [!NOTE]
 >
-> SQLite does not have an async API, so we use `spawn()` to run database operations in worker threads. This prevents blocking the main event loop while maintaining good performance for concurrent requests.
+> SQLite does not have an async API, so we use `ecewo_spawn()` to run database operations in worker threads. This prevents blocking the main event loop while maintaining good performance for concurrent requests.

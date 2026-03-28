@@ -37,7 +37,8 @@ Let's parse it in `main.c`:
 #include <stdio.h>
 
 int main(void) {
-    if (server_init() != 0) {
+    App *app = ecewo_create();
+    if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
     }
@@ -53,12 +54,12 @@ int main(void) {
     // to use it as PORT
     const int PORT = (int)atoi(port);
 
-    if (server_listen(PORT) != 0) {
+    if (ecewo_listen(app, PORT) != 0) {
         fprintf(stderr, "Failed to start server\n");
         return 1;
     }
 
-    server_run();
+    ecewo_run(app);
     return 0;
 }
 ```

@@ -52,24 +52,25 @@ void hello_world_cbor(Req *req, Res *res) {
     size_t len = cbor_encoder_get_buffer_size(&encoder, buffer);
 
     // Send the CBOR response with status code 200
-    set_header(res, "Content-Type", "application/cbor");
-    reply(res, 200, buffer, len);
+    ecewo_set_header(res, "Content-Type", "application/cbor");
+    ecewo_reply(res, 200, buffer, len);
 }
 
 int main(void) {
-    if (server_init() != 0) {
+    App *app = ecewo_create();
+    if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
     }
 
-    get("/cbor", hello_world_cbor);
+    ECEWO_GET(app, "/cbor", hello_world_cbor);
 
-    if (server_listen(3000) != 0) {
+    if (ecewo_listen(app, 3000) != 0) {
         fprintf(stderr, "Failed to start server\n");
         return 1;
     }
 
-    server_run();
+    ecewo_run(app);
     return 0;
 }
 ```
@@ -90,7 +91,7 @@ void handle_user_cbor(Req *req, Res *res) {
     size_t data_len = req->body_len; // Length in bytes of the incoming body
 
     if (!data || data_len == 0) {
-        send_text(res, 400, "Missing request body");
+        ecewo_send_text(res, 400, "Missing request body");
         return;
     }
 
@@ -99,13 +100,13 @@ void handle_user_cbor(Req *req, Res *res) {
     CborValue it;
     CborError err = cbor_parser_init(data, data_len, 0, &parser, &it);
     if (err != CborNoError) {
-        send_text(res, 400, "Invalid CBOR");
+        ecewo_send_text(res, 400, "Invalid CBOR");
         return;
     }
 
     // Check that the outermost item is a map (dictionary)
     if (!cbor_value_is_map(&it)) {
-        send_text(res, 400, "Expected CBOR map");
+        ecewo_send_text(res, 400, "Expected CBOR map");
         return;
     }
 
@@ -118,36 +119,36 @@ void handle_user_cbor(Req *req, Res *res) {
     // name
     err = cbor_value_map_find_value(&map, "name", &val);
     if (err != CborNoError || !cbor_value_is_text_string(&val)) {
-        send_text(res, 400, "Missing or invalid 'name'");
+        ecewo_send_text(res, 400, "Missing or invalid 'name'");
         goto cleanup;
     }
     err = cbor_value_dup_text_string(&val, &name, &len, &it);
     if (err != CborNoError) {
-        send_text(res, 400, "Failed to read 'name'");
+        ecewo_send_text(res, 400, "Failed to read 'name'");
         goto cleanup;
     }
 
     // surname
     err = cbor_value_map_find_value(&map, "surname", &val);
     if (err != CborNoError || !cbor_value_is_text_string(&val)) {
-        send_text(res, 400, "Missing or invalid 'surname'");
+        ecewo_send_text(res, 400, "Missing or invalid 'surname'");
         goto cleanup;
     }
     err = cbor_value_dup_text_string(&val, &surname, &len, &it);
     if (err != CborNoError) {
-        send_text(res, 400, "Failed to read 'surname'");
+        ecewo_send_text(res, 400, "Failed to read 'surname'");
         goto cleanup;
     }
 
     // username
     err = cbor_value_map_find_value(&map, "username", &val);
     if (err != CborNoError || !cbor_value_is_text_string(&val)) {
-        send_text(res, 400, "Missing or invalid 'username'");
+        ecewo_send_text(res, 400, "Missing or invalid 'username'");
         goto cleanup;
     }
     err = cbor_value_dup_text_string(&val, &username, &len, &it);
     if (err != CborNoError) {
-        send_text(res, 400, "Failed to read 'username'");
+        ecewo_send_text(res, 400, "Failed to read 'username'");
         goto cleanup;
     }
 
@@ -155,7 +156,7 @@ void handle_user_cbor(Req *req, Res *res) {
     printf("Name: %s\n", name);
     printf("Surname: %s\n", surname);
     printf("Username: %s\n", username);
-    send_text(res, 200, "Success!");
+    ecewo_send_text(res, 200, "Success!");
 
 cleanup:
     // Free allocated strings
@@ -168,19 +169,20 @@ cleanup:
 }
 
 int main(void) {
-    if (server_init() != 0) {
+    App *app = ecewo_create();
+    if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
     }
 
-    post("/cbor", handle_user_cbor);
+    ECEWO_POST(app, "/cbor", handle_user_cbor);
 
-    if (server_listen(3000) != 0) {
+    if (ecewo_listen(app, 3000) != 0) {
         fprintf(stderr, "Failed to start server\n");
         return 1;
     }
 
-    server_run();
+    ecewo_run(app);
     return 0;
 }
 ```
