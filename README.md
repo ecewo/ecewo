@@ -46,12 +46,7 @@ int main(void) {
 
   ECEWO_GET(app, "/", hello_world);
 
-  if (ecewo_listen(app, 3000) != 0) {
-    fprintf(stderr, "Failed to start server\n");
-    return -1;
-  }
-
-  ecewo_run(app);
+  ecewo_listen(app, 3000);
   return 0;
 }
 ```

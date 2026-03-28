@@ -46,7 +46,7 @@ struct server_t;
 
 // Create with ecewo_create()
 typedef struct App {
-  // Runtime configuration: set before calling ecewo_listen()
+  // Runtime configuration: set before calling ecewo_bind() or ecewo_listen()
   int max_connections; // default: 10000
   int listen_backlog; // default: 511
   uint64_t idle_timeout_ms; // default: 60000
@@ -200,8 +200,9 @@ typedef void (*timer_callback_t)(void *user_data);
 
 // APP FUNCTIONS
 App *ecewo_create(void);
-int ecewo_listen(App *app, uint16_t port);
+int ecewo_bind(App *app, uint16_t port);
 void ecewo_run(App *app);
+void ecewo_listen(App *app, uint16_t port);
 void ecewo_shutdown(App *app);
 void ecewo_atexit(App *app, shutdown_callback_t callback);
 

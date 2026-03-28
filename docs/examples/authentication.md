@@ -93,7 +93,6 @@ int main(void) {
 
     ecewo_atexit(app, cleanup_app);
     ecewo_listen(app, 3000);
-    ecewo_run(app);
     return 0;
 }
 ```
@@ -154,7 +153,6 @@ int main(void) {
 
     ecewo_atexit(app, cleanup_app);
     ecewo_listen(app, 3000);
-    ecewo_run(app);
     return 0;
 }
 ```
@@ -241,7 +239,6 @@ int main(void) {
 
     ecewo_atexit(app, cleanup_app);
     ecewo_listen(app, 3000);
-    ecewo_run(app);
     return 0;
 }
 ```
@@ -307,7 +304,6 @@ int main(void) {
 
     ecewo_atexit(app, cleanup_app);
     ecewo_listen(app, 3000);
-    ecewo_run(app);
     return 0;
 }
 ```

@@ -987,7 +987,7 @@ App *ecewo_create(void) {
   return app;
 }
 
-int ecewo_listen(App *app, uint16_t port) {
+int ecewo_bind(App *app, uint16_t port) {
   if (!app || !app->internal)
     return SERVER_NOT_INITIALIZED;
 
@@ -1066,6 +1066,13 @@ void ecewo_run(App *app) {
   uv_run(srv->loop, UV_RUN_DEFAULT);
 
   server_cleanup(srv);
+}
+
+void ecewo_listen(App *app, uint16_t port) {
+  if (ecewo_bind(app, port) != 0)
+    return;
+
+  ecewo_run(app);
 }
 
 void ecewo_atexit(App *app, shutdown_callback_t callback) {
