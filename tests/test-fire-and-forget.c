@@ -46,14 +46,14 @@ void handler_fire_and_forget(Req *req, Res *res) {
   ctx->arena = bg_arena;
   ctx->increment = 10;
 
-  spawn(ctx, background_work, NULL);
-  send_text(res, ACCEPTED, "Status: Accepted");
+  ecewo_spawn(ctx, background_work, NULL);
+  ecewo_send_text(res, ACCEPTED, "Status: Accepted");
 }
 
 void handler_check_counter(Req *req, Res *res) {
   (void)req;
   char *response = arena_sprintf(req->arena, "Counter: %d", background_counter);
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_spawn_fire_and_forget(void) {
@@ -85,8 +85,8 @@ int test_spawn_fire_and_forget(void) {
 }
 
 static void setup_routes(App *app) {
-  post(app, "/background", handler_fire_and_forget);
-  get(app, "/check-counter", handler_check_counter);
+  ECEWO_POST(app, "/background", handler_fire_and_forget);
+  ECEWO_GET(app, "/check-counter", handler_check_counter);
 }
 
 int main(void) {

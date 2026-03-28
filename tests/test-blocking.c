@@ -61,7 +61,7 @@ static void thread_test_done(void *context) {
                                  ctx->work_thread_id,
                                  ctx->done_thread_id);
 
-  send_text(ctx->res, 200, response);
+  ecewo_send_text(ctx->res, 200, response);
 }
 
 // ============================================================================
@@ -76,24 +76,24 @@ void handler_thread_test(Req *req, Res *res) {
   ctx->work_thread_id = 0;
   ctx->done_thread_id = 0;
 
-  spawn(ctx, thread_test_work, thread_test_done);
+  ecewo_spawn(ctx, thread_test_work, thread_test_done);
 }
 
 void handler_get_main_thread(Req *req, Res *res) {
   (void)req;
   char *response = arena_sprintf(res->arena, "%" PRIu64, get_thread_id());
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 void handler_fast(Req *req, Res *res) {
   (void)req;
-  send_text(res, 200, "fast");
+  ecewo_send_text(res, 200, "fast");
 }
 
 void handler_slow(Req *req, Res *res) {
   (void)req;
   uv_sleep(300);
-  send_text(res, 200, "slow");
+  ecewo_send_text(res, 200, "slow");
 }
 
 // ============================================================================
@@ -229,10 +229,10 @@ int test_sync_blocking(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/thread-test", handler_thread_test);
-  get(app, "/main-thread", handler_get_main_thread);
-  get(app, "/fast", handler_fast);
-  get(app, "/slow", handler_slow);
+  ECEWO_GET(app, "/thread-test", handler_thread_test);
+  ECEWO_GET(app, "/main-thread", handler_get_main_thread);
+  ECEWO_GET(app, "/fast", handler_fast);
+  ECEWO_GET(app, "/slow", handler_slow);
 }
 
 int main(void) {

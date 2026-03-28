@@ -26,7 +26,7 @@
 
 void handler_body(Req *req, Res *res) {
   char *response = arena_sprintf(req->arena, "received=%zu", req->body_len);
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_large_body(void) {
@@ -73,8 +73,8 @@ int test_normal_body(void) {
 }
 
 static void setup_routes(App *app) {
-  post(app, "/large-body", handler_body);
-  post(app, "/normal-body", handler_body);
+  ECEWO_POST(app, "/large-body", handler_body);
+  ECEWO_POST(app, "/normal-body", handler_body);
 }
 
 int main(void) {

@@ -31,30 +31,30 @@
 
 // Echoes the :name dynamic param
 static void param_handler(Req *req, Res *res) {
-  const char *name = get_param(req, "name");
-  send_text(res, 200, name ? name : "no-param");
+  const char *name = ecewo_get_param(req, "name");
+  ecewo_send_text(res, 200, name ? name : "no-param");
 }
 
 // Echoes the "q" query value
 static void search_handler(Req *req, Res *res) {
-  const char *q = get_query(req, "q");
-  send_text(res, 200, q ? q : "no-query");
+  const char *q = ecewo_get_query(req, "q");
+  ecewo_send_text(res, 200, q ? q : "no-query");
 }
 
 // Echoes both a dynamic param and a query value
 static void param_and_query_handler(Req *req, Res *res) {
-  const char *name = get_param(req, "name");
-  const char *q = get_query(req, "q");
+  const char *name = ecewo_get_param(req, "name");
+  const char *q = ecewo_get_query(req, "q");
   char *response = arena_sprintf(req->arena, "name=%s,q=%s",
                                  name ? name : "null",
                                  q ? q : "null");
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 static void setup_routes(App *app) {
-  get(app, "/users/:name", param_handler);
-  get(app, "/search", search_handler);
-  get(app, "/users/:name/search", param_and_query_handler);
+  ECEWO_GET(app, "/users/:name", param_handler);
+  ECEWO_GET(app, "/search", search_handler);
+  ECEWO_GET(app, "/users/:name/search", param_and_query_handler);
 }
 
 // -------------------------------------------------------------------------

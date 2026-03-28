@@ -37,15 +37,16 @@ typedef struct uv_timer_s uv_timer_t;
 typedef struct uv_tcp_s uv_tcp_t;
 typedef uv_timer_t Timer;
 
+// Do not access directly
 typedef struct client_s client_t;
 
 // Opaque internal server state
 // Do not access directly
 struct server_t;
 
-// Create with ecewo()
+// Create with ecewo_create()
 typedef struct App {
-  // Runtime configuration: set before calling server_listen()
+  // Runtime configuration: set before calling ecewo_listen()
   int max_connections; // default: 10000
   int listen_backlog; // default: 511
   uint64_t idle_timeout_ms; // default: 60000
@@ -74,6 +75,7 @@ typedef struct {
   uint16_t capacity;
 } request_t;
 
+// Do not access directly
 typedef struct context_t context_t;
 
 typedef struct Req {
@@ -197,83 +199,83 @@ typedef void (*shutdown_callback_t)(void);
 typedef void (*timer_callback_t)(void *user_data);
 
 // APP FUNCTIONS
-App *ecewo(void);
-int server_listen(App *app, uint16_t port);
-void server_run(App *app);
-void server_shutdown(App *app);
-void server_atexit(App *app, shutdown_callback_t callback);
+App *ecewo_create(void);
+int ecewo_listen(App *app, uint16_t port);
+void ecewo_run(App *app);
+void ecewo_shutdown(App *app);
+void ecewo_atexit(App *app, shutdown_callback_t callback);
 
 // TIMER FUNCTIONS
-Timer *set_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data);
-Timer *set_interval(timer_callback_t callback, uint64_t interval_ms, void *user_data);
-void clear_timer(Timer *timer);
+Timer *ecewo_set_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data);
+Timer *ecewo_set_interval(timer_callback_t callback, uint64_t interval_ms, void *user_data);
+void ecewo_clear_timer(Timer *timer);
 
 // Enable request timeout for the current request
 // Returns 0 on success, -1 on error
 // Call this in your route handler or middleware to set a timeout
 // Call it multiple times to reset or renew
-int request_timeout(Res *res, uint64_t timeout_ms);
+int ecewo_request_timeout(Res *res, uint64_t timeout_ms);
 
 // REQUEST FUNCTIONS
-const char *get_param(const Req *req, const char *key);
-const char *get_query(const Req *req, const char *key);
-const char *get_header(const Req *req, const char *key);
+const char *ecewo_get_param(const Req *req, const char *key);
+const char *ecewo_get_query(const Req *req, const char *key);
+const char *ecewo_get_header(const Req *req, const char *key);
 
 // RESPONSE FUNCTIONS
-void reply(Res *res, int status, const void *body, size_t body_len);
-void redirect(Res *res, int status, const char *url);
+void ecewo_reply(Res *res, int status, const void *body, size_t body_len);
+void ecewo_redirect(Res *res, int status, const char *url);
 
-// set_header DOES NOT check for duplicates!
+// ecewo_set_header DOES NOT check for duplicates!
 // User is responsible for avoiding duplicate headers.
 // Multiple calls with same name will add multiple headers.
-void set_header(Res *res, const char *name, const char *value);
+void ecewo_set_header(Res *res, const char *name, const char *value);
 
-static inline void send_text(Res *res, int status, const char *body) {
-  set_header(res, "Content-Type", "text/plain");
-  reply(res, status, body, strlen(body));
+static inline void ecewo_send_text(Res *res, int status, const char *body) {
+  ecewo_set_header(res, "Content-Type", "text/plain");
+  ecewo_reply(res, status, body, strlen(body));
 }
 
-static inline void send_html(Res *res, int status, const char *body) {
-  set_header(res, "Content-Type", "text/html");
-  reply(res, status, body, strlen(body));
+static inline void ecewo_send_html(Res *res, int status, const char *body) {
+  ecewo_set_header(res, "Content-Type", "text/html");
+  ecewo_reply(res, status, body, strlen(body));
 }
 
-static inline void send_json(Res *res, int status, const char *body) {
-  set_header(res, "Content-Type", "application/json");
-  reply(res, status, body, strlen(body));
+static inline void ecewo_send_json(Res *res, int status, const char *body) {
+  ecewo_set_header(res, "Content-Type", "application/json");
+  ecewo_reply(res, status, body, strlen(body));
 }
 
 // MIDDLEWARE FUNCTIONS
 
 // Internal function, do not use it
-void ecewo_register_use(App *app, const char *path, MiddlewareHandler middleware_handler);
+void __ecewo_register_use(App *app, const char *path, MiddlewareHandler middleware_handler);
 
 // Internal macro, do not use it
-#define ECEWO_USE_SELECT(_1, _2, NAME, ...) NAME
+#define __ECEWO_USE_SELECT(_1, _2, NAME, ...) NAME
 // Internal macro, do not use it
-#define ECEWO_USE_GLOBAL(app, fn) ecewo_register_use(app, NULL, fn)
+#define __ECEWO_USE_GLOBAL(app, fn) __ecewo_register_use(app, NULL, fn)
 // Internal macro, do not use it
-#define ECEWO_USE_PATH(app, path, fn) ecewo_register_use(app, path, fn)
+#define __ECEWO_USE_PATH(app, path, fn) __ecewo_register_use(app, path, fn)
 
-// use(app, fn) => global middleware, runs for every request
-// use(app, "/path", fn) => prefix middleware, runs only when path starts with "/path"
-#define use(app, ...) ECEWO_USE_SELECT(__VA_ARGS__, ECEWO_USE_PATH, ECEWO_USE_GLOBAL)(app, __VA_ARGS__)
+// ecewo_use(app, fn) => global middleware, runs for every request
+// ecewo_use(app, "/path", fn) => prefix middleware, runs only when path starts with "/path"
+#define ECEWO_USE(app, ...) __ECEWO_USE_SELECT(__VA_ARGS__, __ECEWO_USE_PATH, __ECEWO_USE_GLOBAL)(app, __VA_ARGS__)
 
-void set_context(Req *req, const char *key, void *data);
-void *get_context(Req *req, const char *key);
+void ecewo_set_context(Req *req, const char *key, void *data);
+void *ecewo_get_context(Req *req, const char *key);
 
 // TASK SPAWN
 typedef void (*spawn_handler_t)(void *context);
 typedef void (*spawn_done_t)(Res *res, void *context);
 
 // For general async work (no request/response)
-int spawn(void *context, spawn_handler_t work_fn, spawn_handler_t done_fn);
+int ecewo_spawn(void *context, spawn_handler_t work_fn, spawn_handler_t done_fn);
 
 // For async request handling
-int spawn_http(Res *res,
-               void *context,
-               spawn_handler_t work_fn,
-               spawn_done_t done_fn);
+int ecewo_spawn_http(Res *res,
+                     void *context,
+                     spawn_handler_t work_fn,
+                     spawn_done_t done_fn);
 
 // ROUTE REGISTRATION
 typedef enum {
@@ -286,38 +288,38 @@ typedef enum {
   HTTP_METHOD_PATCH = 28
 } http_method_t;
 
-#define MW(...) \
+#define __MW(...) \
   (sizeof((void *[]) { __VA_ARGS__ }) / sizeof(void *) - 1)
 
 // Internal functions, do not use them directly
-void ecewo_register_get(App *app, const char *path, int mw_count, ...);
-void ecewo_register_post(App *app, const char *path, int mw_count, ...);
-void ecewo_register_put(App *app, const char *path, int mw_count, ...);
-void ecewo_register_patch(App *app, const char *path, int mw_count, ...);
-void ecewo_register_del(App *app, const char *path, int mw_count, ...);
-void ecewo_register_head(App *app, const char *path, int mw_count, ...);
-void ecewo_register_options(App *app, const char *path, int mw_count, ...);
+void __ecewo_register_get(App *app, const char *path, int mw_count, ...);
+void __ecewo_register_post(App *app, const char *path, int mw_count, ...);
+void __ecewo_register_put(App *app, const char *path, int mw_count, ...);
+void __ecewo_register_patch(App *app, const char *path, int mw_count, ...);
+void __ecewo_register_del(App *app, const char *path, int mw_count, ...);
+void __ecewo_register_head(App *app, const char *path, int mw_count, ...);
+void __ecewo_register_options(App *app, const char *path, int mw_count, ...);
 
-#define get(app, path, ...) \
-  ecewo_register_get(app, path, MW(__VA_ARGS__), __VA_ARGS__)
+#define ECEWO_GET(app, path, ...) \
+  __ecewo_register_get(app, path, __MW(__VA_ARGS__), __VA_ARGS__)
 
-#define post(app, path, ...) \
-  ecewo_register_post(app, path, MW(__VA_ARGS__), __VA_ARGS__)
+#define ECEWO_POST(app, path, ...) \
+  __ecewo_register_post(app, path, __MW(__VA_ARGS__), __VA_ARGS__)
 
-#define put(app, path, ...) \
-  ecewo_register_put(app, path, MW(__VA_ARGS__), __VA_ARGS__)
+#define ECEWO_PUT(app, path, ...) \
+  __ecewo_register_put(app, path, __MW(__VA_ARGS__), __VA_ARGS__)
 
-#define patch(app, path, ...) \
-  ecewo_register_patch(app, path, MW(__VA_ARGS__), __VA_ARGS__)
+#define ECEWO_PATCH(app, path, ...) \
+  __ecewo_register_patch(app, path, __MW(__VA_ARGS__), __VA_ARGS__)
 
-#define del(app, path, ...) \
-  ecewo_register_del(app, path, MW(__VA_ARGS__), __VA_ARGS__)
+#define ECEWO_DELETE(app, path, ...) \
+  __ecewo_register_del(app, path, __MW(__VA_ARGS__), __VA_ARGS__)
 
-#define head(app, path, ...) \
-  ecewo_register_headl(app, path, MW(__VA_ARGS__), __VA_ARGS__)
+#define ECEWO_HEAD(app, path, ...) \
+  __ecewo_register_head(app, path, __MW(__VA_ARGS__), __VA_ARGS__)
 
-#define options(app, path, ...) \
-  ecewo_register_options(app, path, MW(__VA_ARGS__), __VA_ARGS__)
+#define ECEWO_OPTIONS(app, path, ...) \
+  __ecewo_register_options(app, path, __MW(__VA_ARGS__), __VA_ARGS__)
 
 // Called for each chunk of body data.
 typedef void (*BodyDataCb)(Req *req, const uint8_t *data, size_t len);
@@ -326,33 +328,33 @@ typedef void (*BodyDataCb)(Req *req, const uint8_t *data, size_t len);
 typedef void (*BodyEndCb)(Req *req, Res *res);
 
 // Place this middleware to enable the body streaming
-// The handler will be called before the body arrives; use body_on_data()
-// and body_on_end() to receive it
+// The handler will be called before the body arrives; use ecewo_body_on_data()
+// and ecewo_body_on_end() to receive it
 // Without this middleware the body is fully buffered and available via
 // req->body / req->body_len when the handler runs.
-void body_stream(Req *req, Res *res, Next next);
+void ecewo_body_stream(Req *req, Res *res, Next next);
 
 // Register a callback for body chunks.
 // In streaming mode: called as chunks arrive from the network.
 // In buffered mode:  called once synchronously with the full body.
-void body_on_data(Req *req, BodyDataCb callback);
+void ecewo_body_on_data(Req *req, BodyDataCb callback);
 
 // Register a callback for end-of-body.
 // In streaming mode: called after the last chunk.
 // In buffered mode:  called immediately if body_on_data already ran.
-void body_on_end(Req *req, Res *res, BodyEndCb callback);
+void ecewo_body_on_end(Req *req, Res *res, BodyEndCb callback);
 
 // Set the maximum body size in bytes (default: 10MB).
 // Returns the previous limit.
-size_t body_limit(Req *req, size_t max_bytes);
+size_t ecewo_body_limit(Req *req, size_t max_bytes);
 
 // DEVELOPMENT FUNCTIONS FOR PLUGINS
-bool client_is_valid(void *client_socket_data);
-void client_ref(client_t *client);
-void client_unref(client_t *client);
-void increment_async_work(void);
-void decrement_async_work(void);
-uv_loop_t *get_loop(void);
+bool ecewo_client_is_valid(void *client_socket_data);
+void ecewo_client_ref(client_t *client);
+void ecewo_client_unref(client_t *client);
+void ecewo_increment_async_work(void);
+void ecewo_decrement_async_work(void);
+uv_loop_t *ecewo_get_loop(void);
 
 typedef struct TakeoverConfig {
   void *alloc_cb;
@@ -361,12 +363,12 @@ typedef struct TakeoverConfig {
   void *user_data;
 } TakeoverConfig;
 
-int connection_takeover(Res *res, const TakeoverConfig *config);
-uv_tcp_t *get_client_handle(Res *res);
+int ecewo_connection_takeover(Res *res, const TakeoverConfig *config);
+uv_tcp_t *ecewo_get_client_handle(Res *res);
 
 // DEBUG FUNCTIONS
-bool server_is_running(App *app);
-int server_active_connections(App *app);
+bool ecewo_is_running(App *app);
+int ecewo_active_connections(App *app);
 
 #ifdef __cplusplus
 }

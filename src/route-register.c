@@ -82,10 +82,10 @@
       LOG_ERROR("Failed to add route: %s", path);                           \
   }
 
-ROUTE_REGISTER(ecewo_register_get, HTTP_GET) // NOLINT(clang-analyzer-valist.Uninitialized)
-ROUTE_REGISTER(ecewo_register_post, HTTP_POST) // NOLINT(clang-analyzer-valist.Uninitialized)
-ROUTE_REGISTER(ecewo_register_put, HTTP_PUT) // NOLINT(clang-analyzer-valist.Uninitialized)
-ROUTE_REGISTER(ecewo_register_patch, HTTP_PATCH) // NOLINT(clang-analyzer-valist.Uninitialized)
-ROUTE_REGISTER(ecewo_register_del, HTTP_DELETE) // NOLINT(clang-analyzer-valist.Uninitialized)
-ROUTE_REGISTER(ecewo_register_head, HTTP_HEAD) // NOLINT(clang-analyzer-valist.Uninitialized)
-ROUTE_REGISTER(ecewo_register_options, HTTP_OPTIONS) // NOLINT(clang-analyzer-valist.Uninitialized)
+ROUTE_REGISTER(__ecewo_register_get, HTTP_GET) // NOLINT(clang-analyzer-valist.Uninitialized)
+ROUTE_REGISTER(__ecewo_register_post, HTTP_POST) // NOLINT(clang-analyzer-valist.Uninitialized)
+ROUTE_REGISTER(__ecewo_register_put, HTTP_PUT) // NOLINT(clang-analyzer-valist.Uninitialized)
+ROUTE_REGISTER(__ecewo_register_patch, HTTP_PATCH) // NOLINT(clang-analyzer-valist.Uninitialized)
+ROUTE_REGISTER(__ecewo_register_del, HTTP_DELETE) // NOLINT(clang-analyzer-valist.Uninitialized)
+ROUTE_REGISTER(__ecewo_register_head, HTTP_HEAD) // NOLINT(clang-analyzer-valist.Uninitialized)
+ROUTE_REGISTER(__ecewo_register_options, HTTP_OPTIONS) // NOLINT(clang-analyzer-valist.Uninitialized)

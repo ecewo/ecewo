@@ -26,16 +26,16 @@
 #include <string.h>
 
 void handler_query_params(Req *req, Res *res) {
-  const char *page = get_query(req, "page");
-  const char *limit = get_query(req, "limit");
-  const char *sort = get_query(req, "sort");
+  const char *page = ecewo_get_query(req, "page");
+  const char *limit = ecewo_get_query(req, "limit");
+  const char *sort = ecewo_get_query(req, "sort");
 
   char *response = arena_sprintf(req->arena, "page=%s,limit=%s,sort=%s",
                                  page ? page : "null",
                                  limit ? limit : "null",
                                  sort ? sort : "null");
 
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_query_multiple(void) {
@@ -85,7 +85,7 @@ int test_query_no_params(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/search", handler_query_params);
+  ECEWO_GET(app, "/search", handler_query_params);
 }
 
 int main(void) {

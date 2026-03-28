@@ -26,7 +26,7 @@
 
 void handler_root(Req *req, Res *res) {
   (void)req;
-  send_text(res, 200, "root");
+  ecewo_send_text(res, 200, "root");
 }
 
 int test_root_path(void) {
@@ -45,7 +45,7 @@ int test_root_path(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/", handler_root);
+  ECEWO_GET(app, "/", handler_root);
 }
 
 int main(void) {

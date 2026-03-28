@@ -34,7 +34,7 @@ void handler_body(Req *req, Res *res) {
                                  body_str,
                                  req->method);
 
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_method_get(void) {
@@ -112,11 +112,11 @@ int test_method_patch(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/method", handler_body);
-  post(app, "/method", handler_body);
-  put(app, "/method", handler_body);
-  del(app, "/method", handler_body);
-  patch(app, "/method", handler_body);
+  ECEWO_GET(app, "/method", handler_body);
+  ECEWO_POST(app, "/method", handler_body);
+  ECEWO_PUT(app, "/method", handler_body);
+  ECEWO_DELETE(app, "/method", handler_body);
+  ECEWO_PATCH(app, "/method", handler_body);
 }
 
 int main(void) {

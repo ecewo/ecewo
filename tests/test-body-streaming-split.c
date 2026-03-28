@@ -60,29 +60,29 @@ typedef struct {
 } SplitCtx;
 
 static void on_chunk(Req *req, const uint8_t *data, size_t len) {
-  SplitCtx *ctx = get_context(req, "split_ctx");
+  SplitCtx *ctx = ecewo_get_context(req, "split_ctx");
   ctx->chunks_received++;
   ctx->total_bytes += len;
   (void)data;
 }
 
 static void on_end(Req *req, Res *res) {
-  SplitCtx *ctx = get_context(req, "split_ctx");
+  SplitCtx *ctx = ecewo_get_context(req, "split_ctx");
   char *body = arena_sprintf(req->arena, "chunks=%d,bytes=%zu",
                              ctx->chunks_received, ctx->total_bytes);
-  send_text(res, OK, body);
+  ecewo_send_text(res, OK, body);
 }
 
 static void handler(Req *req, Res *res) {
   SplitCtx *ctx = arena_alloc(req->arena, sizeof(SplitCtx));
   memset(ctx, 0, sizeof(SplitCtx));
-  set_context(req, "split_ctx", ctx);
-  body_on_data(req, on_chunk);
-  body_on_end(req, res, on_end);
+  ecewo_set_context(req, "split_ctx", ctx);
+  ecewo_body_on_data(req, on_chunk);
+  ecewo_body_on_end(req, res, on_end);
 }
 
 static void setup_routes(App *app) {
-  post(app, "/streaming-split", body_stream, handler);
+  ECEWO_POST(app, "/streaming-split", ecewo_body_stream, handler);
 }
 
 // Send headers and body as two separate TCP writes with a 50 ms gap to force

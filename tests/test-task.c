@@ -38,7 +38,7 @@ static void compute_done(void *context) {
   compute_ctx_t *ctx = (compute_ctx_t *)context;
 
   char *response = arena_sprintf(ctx->res->arena, "result=%d", ctx->result);
-  send_text(ctx->res, 200, response);
+  ecewo_send_text(ctx->res, 200, response);
 }
 
 void handler_compute(Req *req, Res *res) {
@@ -46,7 +46,7 @@ void handler_compute(Req *req, Res *res) {
   ctx->res = res;
   ctx->result = 0;
 
-  spawn(ctx, compute_work, compute_done);
+  ecewo_spawn(ctx, compute_work, compute_done);
 }
 
 int test_spawn_with_response(void) {
@@ -66,7 +66,7 @@ int test_spawn_with_response(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/compute", handler_compute);
+  ECEWO_GET(app, "/compute", handler_compute);
 }
 
 int main(void) {

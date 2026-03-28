@@ -47,16 +47,16 @@ static void auth_done(Res *res, void *context) {
   user->user_id = arena_strdup(res->arena, "user123");
   user->role = arena_strdup(res->arena, "admin");
 
-  set_context(ctx->req, "user", user);
+  ecewo_set_context(ctx->req, "user", user);
 
   ctx->next(ctx->req, res);
 }
 
 void middleware_async_auth(Req *req, Res *res, Next next) {
-  const char *token = get_header(req, "Authorization");
+  const char *token = ecewo_get_header(req, "Authorization");
 
   if (!token) {
-    send_text(res, 401, "Unauthorized");
+    ecewo_send_text(res, 401, "Unauthorized");
     return;
   }
 
@@ -64,14 +64,14 @@ void middleware_async_auth(Req *req, Res *res, Next next) {
   ctx->req = req;
   ctx->next = next;
 
-  spawn_http(res, ctx, auth_work, auth_done);
+  ecewo_spawn_http(res, ctx, auth_work, auth_done);
 }
 
 void handler_protected(Req *req, Res *res) {
-  user_ctx_t *user = get_context(req, "user");
+  user_ctx_t *user = ecewo_get_context(req, "user");
 
   if (!user) {
-    send_text(res, 500, "Internal Server Error");
+    ecewo_send_text(res, 500, "Internal Server Error");
     return;
   }
 
@@ -80,7 +80,7 @@ void handler_protected(Req *req, Res *res) {
                                  user->user_id,
                                  user->role);
 
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_async_auth_middleware(void) {
@@ -120,7 +120,7 @@ int test_async_auth_no_token(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/mw-async", middleware_async_auth, handler_protected);
+  ECEWO_GET(app, "/mw-async", middleware_async_auth, handler_protected);
 }
 
 int main(void) {

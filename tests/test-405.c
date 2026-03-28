@@ -27,14 +27,14 @@
 
 static void ok_handler(Req *req, Res *res) {
   (void)req;
-  send_text(res, 200, "ok");
+  ecewo_send_text(res, 200, "ok");
 }
 
 static void setup_routes(App *app) {
-  get(app, "/users", ok_handler);
-  post(app, "/users", ok_handler);
-  get(app, "/users/:id", ok_handler);
-  get(app, "/files/*", ok_handler);
+  ECEWO_GET(app, "/users", ok_handler);
+  ECEWO_POST(app, "/users", ok_handler);
+  ECEWO_GET(app, "/users/:id", ok_handler);
+  ECEWO_GET(app, "/files/*", ok_handler);
 }
 
 // POST /users is registered -> GET and POST are both allowed

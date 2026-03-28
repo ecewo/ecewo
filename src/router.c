@@ -192,8 +192,8 @@ static int dispatch(struct server_t *srv,
     *res_out = res;
 
   if (!srv || !srv->route_table || !ctx->method) {
-    set_header(res, "Content-Type", "text/plain");
-    reply(res, 404, "404 Not Found", 13);
+    ecewo_set_header(res, "Content-Type", "text/plain");
+    ecewo_reply(res, 404, "404 Not Found", 13);
     return 0;
   }
 
@@ -232,12 +232,12 @@ static int dispatch(struct server_t *srv,
         }
       }
       allow_buf[pos] = '\0';
-      set_header(res, "Allow", allow_buf);
-      set_header(res, "Content-Type", "text/plain");
-      reply(res, 405, "405 Method Not Allowed", 22);
+      ecewo_set_header(res, "Allow", allow_buf);
+      ecewo_set_header(res, "Content-Type", "text/plain");
+      ecewo_reply(res, 405, "405 Method Not Allowed", 22);
     } else {
-      set_header(res, "Content-Type", "text/plain");
-      reply(res, 404, "404 Not Found", 13);
+      ecewo_set_header(res, "Content-Type", "text/plain");
+      ecewo_reply(res, 404, "404 Not Found", 13);
     }
     return 0;
   }
@@ -257,7 +257,7 @@ static int dispatch(struct server_t *srv,
   bool has_stream_middleware = false;
   if (mw) {
     for (uint16_t i = 0; i < mw->middleware_count; i++) {
-      if ((void *)mw->middleware[i] == (void *)body_stream) {
+      if ((void *)mw->middleware[i] == (void *)ecewo_body_stream) {
         has_stream_middleware = true;
         break;
       }
@@ -265,7 +265,7 @@ static int dispatch(struct server_t *srv,
   }
   if (!has_stream_middleware && srv) {
     for (uint16_t i = 0; i < srv->global_middleware_count; i++) {
-      if ((void *)srv->global_middleware[i].handler == (void *)body_stream) {
+      if ((void *)srv->global_middleware[i].handler == (void *)ecewo_body_stream) {
         has_stream_middleware = true;
         break;
       }
@@ -295,9 +295,9 @@ static int dispatch(struct server_t *srv,
   }
 
   if (!ctx->on_body_chunk && has_body && (content_length >= (long)BUFFERED_BODY_MAX_SIZE || is_chunked)) {
-    set_header(res, "Content-Type", "text/plain");
+    ecewo_set_header(res, "Content-Type", "text/plain");
     res->keep_alive = false;
-    reply(res, 413, "Payload Too Large", 17);
+    ecewo_reply(res, 413, "Payload Too Large", 17);
     return 0;
   }
 
@@ -332,7 +332,7 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     return REQUEST_CLOSE;
   }
 
-  client_ref(client);
+  ecewo_client_ref(client);
 
   struct server_t *srv = client->srv;
   uv_tcp_t *handle = (uv_tcp_t *)&client->handle;
@@ -368,7 +368,7 @@ int router(client_t *client, const char *request_data, size_t request_len) {
     if (!client->valid)
       goto done;
 
-    // If body_stream middleware ran, save req/res so that when the body
+    // If ecewo_body_stream middleware ran, save req/res so that when the body
     // finally arrives on a later TCP read, body_stream_complete can be called
     // on this req instead of dispatching a fresh one
     if (ctx->on_body_chunk && req) {
@@ -531,6 +531,6 @@ int router(client_t *client, const char *request_data, size_t request_len) {
   }
 
 done:
-  client_unref(client);
+  ecewo_client_unref(client);
   return retval;
 }

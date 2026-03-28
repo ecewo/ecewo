@@ -26,45 +26,45 @@
 #include <string.h>
 
 void handler_single_param(Req *req, Res *res) {
-  const char *id = get_param(req, "userId");
+  const char *id = ecewo_get_param(req, "userId");
   if (!id) {
-    send_text(res, 400, "Missing id");
+    ecewo_send_text(res, 400, "Missing id");
     return;
   }
   char *response = arena_sprintf(req->arena, "id=%s", id);
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 void handler_multi_param(Req *req, Res *res) {
-  const char *userId = get_param(req, "userId");
-  const char *postId = get_param(req, "postId");
-  const char *commentId = get_param(req, "commentId");
+  const char *userId = ecewo_get_param(req, "userId");
+  const char *postId = ecewo_get_param(req, "postId");
+  const char *commentId = ecewo_get_param(req, "commentId");
 
   if (!userId || !postId || !commentId) {
-    send_text(res, 400, "Missing params");
+    ecewo_send_text(res, 400, "Missing params");
     return;
   }
 
   char *response = arena_sprintf(req->arena, "%s/%s/%s", userId, postId, commentId);
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 void handler_overflow_param(Req *req, Res *res) {
-  const char *id1 = get_param(req, "id1");
-  const char *id2 = get_param(req, "id2");
-  const char *id3 = get_param(req, "id3");
-  const char *id4 = get_param(req, "id4");
-  const char *id5 = get_param(req, "id5");
-  const char *id6 = get_param(req, "id6");
-  const char *id7 = get_param(req, "id7");
-  const char *id8 = get_param(req, "id8");
-  const char *id9 = get_param(req, "id9");
-  const char *id10 = get_param(req, "id10");
+  const char *id1 = ecewo_get_param(req, "id1");
+  const char *id2 = ecewo_get_param(req, "id2");
+  const char *id3 = ecewo_get_param(req, "id3");
+  const char *id4 = ecewo_get_param(req, "id4");
+  const char *id5 = ecewo_get_param(req, "id5");
+  const char *id6 = ecewo_get_param(req, "id6");
+  const char *id7 = ecewo_get_param(req, "id7");
+  const char *id8 = ecewo_get_param(req, "id8");
+  const char *id9 = ecewo_get_param(req, "id9");
+  const char *id10 = ecewo_get_param(req, "id10");
 
   char *response = arena_sprintf(req->arena, "%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
                                  id1, id2, id3, id4, id5, id6, id7, id8, id9, id10);
 
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_single_param(void) {
@@ -132,9 +132,9 @@ int test_overflow_param(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/param/:id1/:id2/:id3/:id4/:id5/:id6/:id7/:id8/:id9/:id10", handler_overflow_param);
-  get(app, "/users/:userId/posts/:postId/comments/:commentId", handler_multi_param);
-  get(app, "/users/:userId", handler_single_param);
+  ECEWO_GET(app, "/param/:id1/:id2/:id3/:id4/:id5/:id6/:id7/:id8/:id9/:id10", handler_overflow_param);
+  ECEWO_GET(app, "/users/:userId/posts/:postId/comments/:commentId", handler_multi_param);
+  ECEWO_GET(app, "/users/:userId", handler_single_param);
 }
 
 int main(void) {

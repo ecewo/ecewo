@@ -52,7 +52,7 @@ static void end_request(client_t *client) {
     uv_timer_stop(client->request_timeout_timer);
     uv_close((uv_handle_t *)client->request_timeout_timer, (uv_close_cb)free);
     client->request_timeout_timer = NULL;
-    client_unref(client);
+    ecewo_client_unref(client);
   }
 }
 
@@ -66,7 +66,7 @@ static void write_completion_cb(uv_write_t *req, int status) {
 
   if (write_req->client) {
     end_request(write_req->client);
-    client_unref(write_req->client);
+    ecewo_client_unref(write_req->client);
   }
 
   if (write_req->data) {
@@ -162,7 +162,7 @@ void send_error(Arena *arena, uv_tcp_t *client_socket, int error_code) {
   write_req->data = response;
   write_req->client = (client_t *)client_socket->data;
   if (write_req->client)
-    client_ref(write_req->client);
+    ecewo_client_ref(write_req->client);
   write_req->buf = uv_buf_init(response, (unsigned int)written);
 
   int res = uv_write(&write_req->req, (uv_stream_t *)client_socket,
@@ -174,7 +174,7 @@ void send_error(Arena *arena, uv_tcp_t *client_socket, int error_code) {
 
     if (write_req->client) {
       end_request(write_req->client);
-      client_unref(write_req->client);
+      ecewo_client_unref(write_req->client);
     }
 
     free(write_req);
@@ -184,7 +184,7 @@ void send_error(Arena *arena, uv_tcp_t *client_socket, int error_code) {
     arena_reset(arena);
 }
 
-void reply(Res *res, int status, const void *body, size_t body_len) {
+void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
   if (!res)
     return;
 
@@ -281,7 +281,7 @@ void reply(Res *res, int status, const void *body, size_t body_len) {
     memcpy(response + headers_len, body, body_len);
 
   // uv_write() is an async operation
-  // so when reply() returns, client can send
+  // so when ecewo_reply() returns, client can send
   // another request and reset the arena,
   // but uv_write() might not be completed yet.
   // Therefore write_req must be
@@ -298,13 +298,13 @@ void reply(Res *res, int status, const void *body, size_t body_len) {
   write_req->data = response;
   write_req->client = (client_t *)res->client_socket->data;
   if (write_req->client)
-    client_ref(write_req->client);
+    ecewo_client_ref(write_req->client);
   write_req->buf = uv_buf_init(response, (unsigned int)total_len);
 
   if (uv_is_closing((uv_handle_t *)res->client_socket)) {
     free(response);
     if (write_req->client)
-      client_unref(write_req->client);
+      ecewo_client_unref(write_req->client);
     free(write_req);
     return;
   }
@@ -318,7 +318,7 @@ void reply(Res *res, int status, const void *body, size_t body_len) {
 
     if (write_req->client) {
       end_request(write_req->client);
-      client_unref(write_req->client);
+      ecewo_client_unref(write_req->client);
     }
 
     free(write_req);
@@ -369,9 +369,9 @@ static bool is_valid_header_value(const char *value) {
   return true;
 }
 
-void set_header(Res *res, const char *name, const char *value) {
+void ecewo_set_header(Res *res, const char *name, const char *value) {
   if (!res || !res->arena || !name || !value) {
-    LOG_ERROR("Invalid argument(s) to set_header");
+    LOG_ERROR("Invalid argument(s) to ecewo_set_header");
     return;
   }
 
@@ -428,14 +428,14 @@ void set_header(Res *res, const char *name, const char *value) {
   res->headers[res->header_count].value = arena_strdup(res->arena, value);
 
   if (!res->headers[res->header_count].name || !res->headers[res->header_count].value) {
-    LOG_ERROR("Failed to allocate memory in set_header");
+    LOG_ERROR("Failed to allocate memory in ecewo_set_header");
     return;
   }
 
   res->header_count++;
 }
 
-void redirect(Res *res, int status, const char *url) {
+void ecewo_redirect(Res *res, int status, const char *url) {
   if (!res || !url)
     return;
 
@@ -448,11 +448,11 @@ void redirect(Res *res, int status, const char *url) {
 
   if (!is_valid_header_value(url)) {
     LOG_ERROR("Invalid redirect URL (CRLF detected)");
-    send_text(res, BAD_REQUEST, "Bad Request");
+    ecewo_send_text(res, BAD_REQUEST, "Bad Request");
     return;
   }
 
-  set_header(res, "Location", url);
+  ecewo_set_header(res, "Location", url);
 
   const char *message;
   size_t message_len;
@@ -484,6 +484,6 @@ void redirect(Res *res, int status, const char *url) {
     break;
   }
 
-  set_header(res, "Content-Type", "text/plain");
-  reply(res, status, message, message_len);
+  ecewo_set_header(res, "Content-Type", "text/plain");
+  ecewo_reply(res, status, message, message_len);
 }

@@ -28,7 +28,7 @@ void handler_counter(Req *req, Res *res) {
   static int counter = 0;
   counter++;
   char *response = arena_sprintf(req->arena, "%d", counter);
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_sequential_requests(void) {
@@ -52,7 +52,7 @@ int test_sequential_requests(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/counter", handler_counter);
+  ECEWO_GET(app, "/counter", handler_counter);
 }
 
 int main(void) {

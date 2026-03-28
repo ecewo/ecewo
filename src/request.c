@@ -47,28 +47,28 @@ static const char *get_req(const request_t *request, const char *key, bool case_
   return NULL;
 }
 
-const char *get_param(const Req *req, const char *key) {
+const char *ecewo_get_param(const Req *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(&req->params, key, false);
 }
 
-const char *get_query(const Req *req, const char *key) {
+const char *ecewo_get_query(const Req *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(&req->query, key, false);
 }
 
-const char *get_header(const Req *req, const char *key) {
+const char *ecewo_get_header(const Req *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(&req->headers, key, true);
 }
 
-void set_context(Req *req, const char *key, void *data) {
+void ecewo_set_context(Req *req, const char *key, void *data) {
   if (!req || !key)
     return;
 
@@ -116,7 +116,7 @@ void set_context(Req *req, const char *key, void *data) {
   ctx->count++;
 }
 
-void *get_context(Req *req, const char *key) {
+void *ecewo_get_context(Req *req, const char *key) {
   if (!req || !req->ctx || !key)
     return NULL;
 

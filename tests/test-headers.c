@@ -25,16 +25,16 @@
 #include "tester.h"
 
 void handler_echo_headers(Req *req, Res *res) {
-  const char *auth = get_header(req, "Authorization");
-  const char *content_type = get_header(req, "Content-Type");
-  const char *custom = get_header(req, "X-Custom-Header");
+  const char *auth = ecewo_get_header(req, "Authorization");
+  const char *content_type = ecewo_get_header(req, "Content-Type");
+  const char *custom = ecewo_get_header(req, "X-Custom-Header");
 
   char *response = arena_sprintf(req->arena, "auth=%s,ct=%s,custom=%s",
                                  auth ? auth : "null",
                                  content_type ? content_type : "null",
                                  custom ? custom : "null");
 
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_request_headers(void) {
@@ -62,10 +62,10 @@ int test_request_headers(void) {
 
 void handler_set_headers(Req *req, Res *res) {
   (void)req;
-  set_header(res, "X-Custom-Header", "test-value");
-  set_header(res, "X-Request-Id", "12345");
-  set_header(res, "Cache-Control", "no-cache");
-  send_text(res, 200, "OK");
+  ecewo_set_header(res, "X-Custom-Header", "test-value");
+  ecewo_set_header(res, "X-Request-Id", "12345");
+  ecewo_set_header(res, "Cache-Control", "no-cache");
+  ecewo_send_text(res, 200, "OK");
 }
 
 int test_set_headers(void) {
@@ -96,9 +96,9 @@ int test_set_headers(void) {
 void handler_header_injection(Req *req, Res *res) {
   (void)req;
 
-  set_header(res, "X-Evil", "value\r\nSet-Cookie: hacked=1");
-  set_header(res, "X-Valid", "normal-value");
-  send_text(res, 200, "OK");
+  ecewo_set_header(res, "X-Evil", "value\r\nSet-Cookie: hacked=1");
+  ecewo_set_header(res, "X-Valid", "normal-value");
+  ecewo_send_text(res, 200, "OK");
 }
 
 int test_header_injection(void) {
@@ -121,9 +121,9 @@ int test_header_injection(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/headers", handler_echo_headers);
-  get(app, "/custom-headers", handler_set_headers);
-  get(app, "/header-injection", handler_header_injection);
+  ECEWO_GET(app, "/headers", handler_echo_headers);
+  ECEWO_GET(app, "/custom-headers", handler_set_headers);
+  ECEWO_GET(app, "/header-injection", handler_header_injection);
 }
 
 int main(void) {

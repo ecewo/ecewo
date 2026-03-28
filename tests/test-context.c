@@ -36,10 +36,10 @@ typedef struct
 // ============================================================================
 
 void context_middleware(Req *req, Res *res, Next next) {
-  const char *token = get_header(req, "Authorization");
+  const char *token = ecewo_get_header(req, "Authorization");
 
   if (!token) {
-    send_text(res, 401, "Unauthorized");
+    ecewo_send_text(res, 401, "Unauthorized");
     return;
   }
 
@@ -47,25 +47,25 @@ void context_middleware(Req *req, Res *res, Next next) {
   ctx->user_id = arena_strdup(req->arena, "user123");
   ctx->role = arena_strdup(req->arena, "admin");
 
-  set_context(req, "user_ctx", ctx);
+  ecewo_set_context(req, "user_ctx", ctx);
 
   next(req, res);
 }
 
 void context_handler(Req *req, Res *res) {
-  user_ctx_t *ctx = (user_ctx_t *)get_context(req, "user_ctx");
+  user_ctx_t *ctx = (user_ctx_t *)ecewo_get_context(req, "user_ctx");
 
   if (!ctx) {
-    send_text(res, 500, "Internal Server Error");
+    ecewo_send_text(res, 500, "Internal Server Error");
     return;
   }
 
   if (strcmp(ctx->user_id, "user123") != 0 || strcmp(ctx->role, "admin") != 0) {
-    send_text(res, FORBIDDEN, "Forbidden");
+    ecewo_send_text(res, FORBIDDEN, "Forbidden");
     return;
   }
 
-  send_text(res, 200, "Success!");
+  ecewo_send_text(res, 200, "Success!");
 }
 
 int test_context_basic(void) {
@@ -94,14 +94,14 @@ int test_context_basic(void) {
 // ============================================================================
 
 void handler_no_middleware(Req *req, Res *res) {
-  user_ctx_t *ctx = (user_ctx_t *)get_context(req, "user_ctx");
+  user_ctx_t *ctx = (user_ctx_t *)ecewo_get_context(req, "user_ctx");
 
   if (!ctx) {
-    send_text(res, 500, "No context");
+    ecewo_send_text(res, 500, "No context");
     return;
   }
 
-  send_text(res, 200, "OK");
+  ecewo_send_text(res, 200, "OK");
 }
 
 int test_context_missing(void) {
@@ -124,9 +124,9 @@ int test_context_missing(void) {
 // ============================================================================
 
 void handler_nonexistent_key(Req *req, Res *res) {
-  void *value = get_context(req, "nonexistent_key");
+  void *value = ecewo_get_context(req, "nonexistent_key");
 
-  send_text(res, 200, value ? "found" : "null");
+  ecewo_send_text(res, 200, value ? "found" : "null");
 }
 
 int test_context_nonexistent_key(void) {
@@ -149,12 +149,12 @@ int test_context_nonexistent_key(void) {
 // ============================================================================
 
 void handler_overwrite(Req *req, Res *res) {
-  set_context(req, "test", "value1");
-  set_context(req, "test", "value2"); // Should overwrite
+  ecewo_set_context(req, "test", "value1");
+  ecewo_set_context(req, "test", "value2"); // Should overwrite
 
-  const char *value = get_context(req, "test");
+  const char *value = ecewo_get_context(req, "test");
 
-  send_text(res, 200, value ? value : "null");
+  ecewo_send_text(res, 200, value ? value : "null");
 }
 
 int test_context_overwrite(void) {
@@ -177,16 +177,16 @@ int test_context_overwrite(void) {
 // ============================================================================
 
 void handler_multiple_keys(Req *req, Res *res) {
-  set_context(req, "key1", "a");
-  set_context(req, "key2", "b");
-  set_context(req, "key3", "c");
+  ecewo_set_context(req, "key1", "a");
+  ecewo_set_context(req, "key2", "b");
+  ecewo_set_context(req, "key3", "c");
 
-  const char *v1 = get_context(req, "key1");
-  const char *v2 = get_context(req, "key2");
-  const char *v3 = get_context(req, "key3");
+  const char *v1 = ecewo_get_context(req, "key1");
+  const char *v2 = ecewo_get_context(req, "key2");
+  const char *v3 = ecewo_get_context(req, "key3");
 
   char *response = arena_sprintf(req->arena, "%s,%s,%s", v1, v2, v3);
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_context_multiple_keys(void) {
@@ -209,9 +209,9 @@ int test_context_multiple_keys(void) {
 // ============================================================================
 
 void handler_null_data(Req *req, Res *res) {
-  set_context(req, "test", NULL);
-  void *value = get_context(req, "test");
-  send_text(res, 200, value == NULL ? "null" : "not-null");
+  ecewo_set_context(req, "test", NULL);
+  void *value = ecewo_get_context(req, "test");
+  ecewo_send_text(res, 200, value == NULL ? "null" : "not-null");
 }
 
 int test_context_null_data(void) {
@@ -234,24 +234,24 @@ int test_context_null_data(void) {
 // ============================================================================
 
 void middleware_first_ctx(Req *req, Res *res, Next next) {
-  set_context(req, "mw1", "first");
+  ecewo_set_context(req, "mw1", "first");
   next(req, res);
 }
 
 void middleware_second_ctx(Req *req, Res *res, Next next) {
-  set_context(req, "mw2", "second");
+  ecewo_set_context(req, "mw2", "second");
   next(req, res);
 }
 
 void handler_chain_context(Req *req, Res *res) {
-  const char *v1 = get_context(req, "mw1");
-  const char *v2 = get_context(req, "mw2");
+  const char *v1 = ecewo_get_context(req, "mw1");
+  const char *v2 = ecewo_get_context(req, "mw2");
 
   char *response = arena_sprintf(req->arena, "%s,%s",
                                  v1 ? v1 : "null",
                                  v2 ? v2 : "null");
 
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_context_middleware_chain(void) {
@@ -288,10 +288,10 @@ void handler_complex_data(Req *req, Res *res) {
   user->email = arena_strdup(req->arena, "john@example.com");
   user->is_admin = true;
 
-  set_context(req, "user", user);
+  ecewo_set_context(req, "user", user);
 
   // Retrieve and verify
-  complex_user_t *retrieved = get_context(req, "user");
+  complex_user_t *retrieved = ecewo_get_context(req, "user");
 
   char *response = arena_sprintf(req->arena,
                                  "id:%d,name:%s,email:%s,admin:%s",
@@ -300,7 +300,7 @@ void handler_complex_data(Req *req, Res *res) {
                                  retrieved->email,
                                  retrieved->is_admin ? "yes" : "no");
 
-  send_text(res, 200, response);
+  ecewo_send_text(res, 200, response);
 }
 
 int test_context_complex_data(void) {
@@ -339,14 +339,14 @@ int test_context_unauthorized(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/context", context_middleware, context_handler);
-  get(app, "/no-middleware", handler_no_middleware);
-  get(app, "/nonexistent-key", handler_nonexistent_key);
-  get(app, "/overwrite", handler_overwrite);
-  get(app, "/multiple-keys", handler_multiple_keys);
-  get(app, "/null-data", handler_null_data);
-  get(app, "/chain-context", middleware_first_ctx, middleware_second_ctx, handler_chain_context);
-  get(app, "/complex-data", handler_complex_data);
+  ECEWO_GET(app, "/context", context_middleware, context_handler);
+  ECEWO_GET(app, "/no-middleware", handler_no_middleware);
+  ECEWO_GET(app, "/nonexistent-key", handler_nonexistent_key);
+  ECEWO_GET(app, "/overwrite", handler_overwrite);
+  ECEWO_GET(app, "/multiple-keys", handler_multiple_keys);
+  ECEWO_GET(app, "/null-data", handler_null_data);
+  ECEWO_GET(app, "/chain-context", middleware_first_ctx, middleware_second_ctx, handler_chain_context);
+  ECEWO_GET(app, "/complex-data", handler_complex_data);
 }
 
 int main(void) {

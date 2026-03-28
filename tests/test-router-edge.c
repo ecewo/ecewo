@@ -30,10 +30,10 @@
 // -------------------------------------------------------------------------
 
 // Route "/:": one segment, is_param=true, param name has length 0.
-// get_param(req, "") retrieves the captured value.
+// ecewo_get_param(req, "") retrieves the captured value.
 static void bare_colon_handler(Req *req, Res *res) {
-  const char *val = get_param(req, "");
-  send_text(res, 200, val ? val : "no-param");
+  const char *val = ecewo_get_param(req, "");
+  ecewo_send_text(res, 200, val ? val : "no-param");
 }
 
 // Route "/prefix/*/suffix"
@@ -42,7 +42,7 @@ static void bare_colon_handler(Req *req, Res *res) {
 // all remaining request segments without examining the rest of the pattern.
 static void wildcard_mid_handler(Req *req, Res *res) {
   (void)req;
-  send_text(res, 200, "wildcard-mid");
+  ecewo_send_text(res, 200, "wildcard-mid");
 }
 
 // Route "/encoded%2Fpath": a static route whose URL contains the three-byte
@@ -50,13 +50,13 @@ static void wildcard_mid_handler(Req *req, Res *res) {
 // so this only matches requests where those three bytes appear literally.
 static void encoded_handler(Req *req, Res *res) {
   (void)req;
-  send_text(res, 200, "encoded");
+  ecewo_send_text(res, 200, "encoded");
 }
 
 static void setup_routes(App *app) {
-  get(app, "/:", bare_colon_handler);
-  get(app, "/prefix/*/suffix", wildcard_mid_handler);
-  get(app, "/encoded%2Fpath", encoded_handler);
+  ECEWO_GET(app, "/:", bare_colon_handler);
+  ECEWO_GET(app, "/prefix/*/suffix", wildcard_mid_handler);
+  ECEWO_GET(app, "/encoded%2Fpath", encoded_handler);
 }
 
 // -------------------------------------------------------------------------
@@ -201,7 +201,7 @@ static int test_real_slash_does_not_match_encoded_route(void) {
 static int test_other_percent_sequences_are_literal(void) {
   // "/encoded%20path" is a single segment (routing is on raw bytes, so
   // "%20" is not a separator). Caught by "/:"; the param value is decoded
-  // after extraction, so get_param() returns "encoded path".
+  // after extraction, so ecewo_get_param() returns "encoded path".
   MockResponse res = request(&(MockParams){
     .method = MOCK_GET,
     .path   = "/encoded%20path",

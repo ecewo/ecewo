@@ -25,23 +25,23 @@
 #include "tester.h"
 
 static void global_tag_mw(Req *req, Res *res, Next next) {
-  set_context(req, "global", "yes");
+  ecewo_set_context(req, "global", "yes");
   next(req, res);
 }
 
 static void api_tag_mw(Req *req, Res *res, Next next) {
-  set_context(req, "api", "yes");
+  ecewo_set_context(req, "api", "yes");
   next(req, res);
 }
 
 static void tag_handler(Req *req, Res *res) {
-  const char *global_tag = get_context(req, "global");
-  const char *api_tag = get_context(req, "api");
+  const char *global_tag = ecewo_get_context(req, "global");
+  const char *api_tag = ecewo_get_context(req, "api");
 
   char *buf = arena_sprintf(req->arena, "global=%s,api=%s",
                             global_tag ? global_tag : "no",
                             api_tag ? api_tag : "no");
-  send_text(res, 200, buf);
+  ecewo_send_text(res, 200, buf);
 }
 
 int test_global_use_runs_everywhere(void) {
@@ -89,13 +89,13 @@ int test_path_use_skipped_for_nonmatching(void) {
 }
 
 static void setup_routes(App *app) {
-  use(app, global_tag_mw);
-  use(app, "/use-api", api_tag_mw);
+  ECEWO_USE(app, global_tag_mw);
+  ECEWO_USE(app, "/use-api", api_tag_mw);
 
-  get(app, "/use-public", tag_handler);
-  get(app, "/use-api", tag_handler);
-  get(app, "/use-api/data", tag_handler);
-  get(app, "/use-apiv2", tag_handler);
+  ECEWO_GET(app, "/use-public", tag_handler);
+  ECEWO_GET(app, "/use-api", tag_handler);
+  ECEWO_GET(app, "/use-api/data", tag_handler);
+  ECEWO_GET(app, "/use-apiv2", tag_handler);
 }
 
 int main(void) {

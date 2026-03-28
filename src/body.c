@@ -52,7 +52,7 @@ typedef struct {
 } StreamCtx;
 
 static StreamCtx *get_ctx(Req *req) {
-  return (StreamCtx *)get_context(req, "_body_stream");
+  return (StreamCtx *)ecewo_get_context(req, "_body_stream");
 }
 
 static StreamCtx *get_or_create_ctx(Req *req) {
@@ -74,7 +74,7 @@ static StreamCtx *get_or_create_ctx(Req *req) {
   if (req->client_socket)
     ctx->client = (client_t *)req->client_socket->data;
 
-  set_context(req, "_body_stream", ctx);
+  ecewo_set_context(req, "_body_stream", ctx);
   return ctx;
 }
 
@@ -101,13 +101,13 @@ static int stream_on_chunk(void *udata, const uint8_t *data, size_t len) {
   return BODY_CHUNK_CONTINUE;
 }
 
-void body_stream(Req *req, Res *res, Next next) {
+void ecewo_body_stream(Req *req, Res *res, Next next) {
   if (!req || !res || !next)
     return;
 
   StreamCtx *ctx = get_or_create_ctx(req);
   if (!ctx) {
-    send_text(res, INTERNAL_SERVER_ERROR, "Internal server error");
+    ecewo_send_text(res, INTERNAL_SERVER_ERROR, "Internal server error");
     return;
   }
 
@@ -124,7 +124,7 @@ void body_stream(Req *req, Res *res, Next next) {
   next(req, res);
 }
 
-void body_on_data(Req *req, BodyDataCb callback) {
+void ecewo_body_on_data(Req *req, BodyDataCb callback) {
   if (!req || !callback)
     return;
 
@@ -140,7 +140,7 @@ void body_on_data(Req *req, BodyDataCb callback) {
   ctx->on_data = callback;
 }
 
-void body_on_end(Req *req, Res *res, BodyEndCb callback) {
+void ecewo_body_on_end(Req *req, Res *res, BodyEndCb callback) {
   if (!req || !res || !callback)
     return;
 
@@ -156,7 +156,7 @@ void body_on_end(Req *req, Res *res, BodyEndCb callback) {
     callback(req, res);
 }
 
-size_t body_limit(Req *req, size_t max_size) {
+size_t ecewo_body_limit(Req *req, size_t max_size) {
   if (!req)
     return 0;
 

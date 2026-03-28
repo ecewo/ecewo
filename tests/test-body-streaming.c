@@ -34,7 +34,7 @@ typedef struct {
 
 
 void chunk_callback(Req *req, const uint8_t *data, size_t len) {
-  StreamContext *ctx = get_context(req, "stream_ctx");
+  StreamContext *ctx = ecewo_get_context(req, "stream_ctx");
   ctx->chunks_received++;
   ctx->total_bytes += len;
 
@@ -43,7 +43,7 @@ void chunk_callback(Req *req, const uint8_t *data, size_t len) {
 }
 
 void end_callback(Req *req, Res *res) {
-  StreamContext *ctx = get_context(req, "stream_ctx");
+  StreamContext *ctx = ecewo_get_context(req, "stream_ctx");
   char *response = arena_sprintf(req->arena,
     "chunks=%d,bytes=%zu,handler_null=%d,chunk_null=%d",
     ctx->chunks_received,
@@ -51,7 +51,7 @@ void end_callback(Req *req, Res *res) {
     ctx->body_null_in_handler ? 1 : 0,
     ctx->body_null_during_chunk ? 1 : 0
   );
-  send_text(res, OK, response);
+  ecewo_send_text(res, OK, response);
 }
 
 
@@ -61,9 +61,9 @@ void handler_streaming_test(Req *req, Res *res) {
 
   ctx->body_null_in_handler = (req->body == NULL);
 
-  set_context(req, "stream_ctx", ctx);
-  body_on_data(req, chunk_callback);
-  body_on_end(req, res, end_callback);
+  ecewo_set_context(req, "stream_ctx", ctx);
+  ecewo_body_on_data(req, chunk_callback);
+  ecewo_body_on_end(req, res, end_callback);
 }
 
 int test_streaming_mode(void) {
@@ -89,7 +89,7 @@ int test_streaming_mode(void) {
 void handler_buffered(Req *req, Res *res) {
   char *response = arena_sprintf(req->arena, "len=%zu,body='%s'",
     req->body_len, req->body ? (const char *)req->body : "NULL");
-  send_text(res, OK, response);
+  ecewo_send_text(res, OK, response);
 }
 
 int test_buffered_mode(void) {
@@ -111,9 +111,9 @@ int test_buffered_mode(void) {
 
 
 void handler_size_limit(Req *req, Res *res) {
-  body_limit(req, 10);
-  body_on_data(req, chunk_callback);
-  body_on_end(req, res, end_callback);
+  ecewo_body_limit(req, 10);
+  ecewo_body_on_data(req, chunk_callback);
+  ecewo_body_on_end(req, res, end_callback);
 }
 
 int test_size_limit(void) {
@@ -133,9 +133,9 @@ int test_size_limit(void) {
 
 
 static void setup_routes(App *app) {
-  post(app, "/streaming", body_stream, handler_streaming_test);
-  post(app, "/buffered", handler_buffered);
-  post(app, "/size-limit", body_stream, handler_size_limit);
+  ECEWO_POST(app, "/streaming", ecewo_body_stream, handler_streaming_test);
+  ECEWO_POST(app, "/buffered", handler_buffered);
+  ECEWO_POST(app, "/size-limit", ecewo_body_stream, handler_size_limit);
 }
 
 int main(void) {

@@ -50,38 +50,38 @@
 
 static void specific_handler(Req *req, Res *res) {
   // Echo the captured :id value so the test can also verify param extraction
-  const char *id = get_param(req, "id");
-  send_text(res, 200, id ? id : "no-id");
+  const char *id = ecewo_get_param(req, "id");
+  ecewo_send_text(res, 200, id ? id : "no-id");
 }
 
 static void generic_handler(Req *req, Res *res) {
   (void)req;
-  send_text(res, 201, "generic");
+  ecewo_send_text(res, 201, "generic");
 }
 
 static void static_handler(Req *req, Res *res) {
   (void)req;
-  send_text(res, 202, "static");
+  ecewo_send_text(res, 202, "static");
 }
 
 static void setup_routes(App *app) {
   // 10 specific same-depth routes registered FIRST
-  get(app, "/a/:id", specific_handler);
-  get(app, "/b/:id", specific_handler);
-  get(app, "/c/:id", specific_handler);
-  get(app, "/d/:id", specific_handler);
-  get(app, "/e/:id", specific_handler);
-  get(app, "/f/:id", specific_handler);
-  get(app, "/g/:id", specific_handler);
-  get(app, "/h/:id", specific_handler);
-  get(app, "/i/:id", specific_handler);
-  get(app, "/j/:id", specific_handler);
+  ECEWO_GET(app, "/a/:id", specific_handler);
+  ECEWO_GET(app, "/b/:id", specific_handler);
+  ECEWO_GET(app, "/c/:id", specific_handler);
+  ECEWO_GET(app, "/d/:id", specific_handler);
+  ECEWO_GET(app, "/e/:id", specific_handler);
+  ECEWO_GET(app, "/f/:id", specific_handler);
+  ECEWO_GET(app, "/g/:id", specific_handler);
+  ECEWO_GET(app, "/h/:id", specific_handler);
+  ECEWO_GET(app, "/i/:id", specific_handler);
+  ECEWO_GET(app, "/j/:id", specific_handler);
 
   // Static route registered after the dynamic ones; must still win (rule 1)
-  get(app, "/a/admin", static_handler);
+  ECEWO_GET(app, "/a/admin", static_handler);
 
   // Generic catch-all registered LAST; loses to all specific ones (rule 2)
-  get(app, "/:category/:id", generic_handler);
+  ECEWO_GET(app, "/:category/:id", generic_handler);
 }
 
 // --- test helpers --------------------------------------------------------

@@ -25,7 +25,7 @@
 #include "tester.h"
 
 void handler(Req *req, Res *res) {
-  send_text(res, OK, req->path);
+  ecewo_send_text(res, OK, req->path);
 }
 
 static int root_test(void) {
@@ -117,9 +117,9 @@ static int wildcard_test(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/", handler);
-  get(app, "/users/:id", handler);
-  get(app, "/files/*", handler);
+  ECEWO_GET(app, "/", handler);
+  ECEWO_GET(app, "/users/:id", handler);
+  ECEWO_GET(app, "/files/*", handler);
 }
 
 int main(void) {

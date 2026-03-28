@@ -53,14 +53,14 @@ static void parallel_done(void *context) {
   ctx->completed++;
 
   if (ctx->has_error && ctx->completed == 1) {
-    send_text(ctx->res, 500, "spawn failed");
+    ecewo_send_text(ctx->res, 500, "ecewo_spawn failed");
     return;
   }
 
   if (ctx->completed == ctx->total && !ctx->has_error) {
     int sum = ctx->results[0] + ctx->results[1] + ctx->results[2];
     char *response = arena_sprintf(ctx->res->arena, "{\"sum\":%d}", sum);
-    send_json(ctx->res, 200, response);
+    ecewo_send_json(ctx->res, 200, response);
   }
 }
 
@@ -74,9 +74,9 @@ void handler_parallel(Req *req, Res *res) {
   ctx->results[2] = 0;
   ctx->has_error = false;
 
-  spawn(ctx, parallel_work_1, parallel_done);
-  spawn(ctx, parallel_work_2, parallel_done);
-  spawn(ctx, parallel_work_3, parallel_done);
+  ecewo_spawn(ctx, parallel_work_1, parallel_done);
+  ecewo_spawn(ctx, parallel_work_2, parallel_done);
+  ecewo_spawn(ctx, parallel_work_3, parallel_done);
 }
 
 int test_spawn_parallel(void) {
@@ -95,7 +95,7 @@ int test_spawn_parallel(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/parallel", handler_parallel);
+  ECEWO_GET(app, "/parallel", handler_parallel);
 }
 
 int main(void) {

@@ -26,12 +26,12 @@
 
 void handler_redirect(Req *req, Res *res) {
   (void)req;
-  redirect(res, MOVED_PERMANENTLY, "/new-location");
+  ecewo_redirect(res, MOVED_PERMANENTLY, "/new-location");
 }
 
 void handler_new_location(Req *req, Res *res) {
   (void)req;
-  send_text(res, OK, "New page content");
+  ecewo_send_text(res, OK, "New page content");
 }
 
 int test_redirect(void) {
@@ -67,13 +67,13 @@ void handler_redirect_injection(Req *req, Res *res) {
   (void)req;
 
   const char *evil_url = "https://motherfuckingmaliciouswebsite.com\r\nSet-Cookie: session=stolen";
-  redirect(res, 302, evil_url);
+  ecewo_redirect(res, 302, evil_url);
 }
 
 int test_redirect_injection(void) {
   MockParams params = {
     .method = MOCK_GET,
-    .path = "/redirect-injection"
+    .path = "/ecewo_redirect-injection"
   };
 
   MockResponse res = request(&params);
@@ -89,9 +89,9 @@ int test_redirect_injection(void) {
 }
 
 static void setup_routes(App *app) {
-  get(app, "/old-path", handler_redirect);
-  get(app, "/new-location", handler_new_location);
-  get(app, "/redirect-injection", handler_redirect_injection);
+  ECEWO_GET(app, "/old-path", handler_redirect);
+  ECEWO_GET(app, "/new-location", handler_new_location);
+  ECEWO_GET(app, "/ecewo_redirect-injection", handler_redirect_injection);
 }
 
 int main(void) {
