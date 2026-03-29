@@ -31,17 +31,13 @@
 //   cmake --build build-fuzz --target fuzz-router
 //   mkdir -p fuzz/corpus && ./build-fuzz/fuzz-router fuzz/corpus -max_len=4096
 // ---------------------------------------------------------------------------
-//
-// The fuzzer exercises two code paths on every input:
-//
-//   A. Path matching  — the first byte selects an HTTP method (0-6), the
-//      remainder is treated as a raw request URL and matched against a fixed
-//      set of routes that was registered during initialisation.
-//
-//   B. Route registration — the remainder bytes are tried as a route pattern
-//      in a throw-away trie.  Arbitrary byte sequences (including embedded
-//      NULs, very long strings, unusual characters) must not crash or corrupt
-//      memory during registration or teardown.
+
+// ---------------------------------------------------------------------------
+// FUZZING STRATEGY:
+// 1 - Path Matching: Use fixed routes to see if random URLs cause crashes.
+// 2 - Route Registration: Try creating temporary routes with "garbage" patterns
+//    to ensure the trie/memory management is robust against malformed input.
+// ---------------------------------------------------------------------------
 
 #include <stdint.h>
 #include <stddef.h>
@@ -52,7 +48,6 @@
 #include "route-table.h"
 #include "llhttp.h"
 
-// Only its address is stored; it is never invoked.
 static void noop(Req *req, Res *res) {
   (void)req;
   (void)res;
@@ -109,7 +104,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   const char *path = (const char *)(data + 1);
   size_t path_len = size - 1;
 
-  // A. Path matching against the fixed trie
+  // 1 - Request Matching (Testing existing routes):
+  // The fuzzer takes the first byte of the random input to pick an HTTP 
+  // method. The rest of the input is treated as a URL.
+  // We check if the router can handle weird, broken,
+  // or extremely long URLs without crashing when comparing them 
+  // against the real routes we defined during startup.
   {
     Arena arena = {0};
     tokenized_path_t tok = {0};
@@ -125,12 +125,16 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     route_match_t match;
     route_table_match(route_table, &parser, &tok, &match, &arena);
 
-    arena_free(&arena);
+    ecewo_free(&arena);
   }
 
-  // B. Route registration — arbitrary pattern in a temporary trie
-  // Limit pattern length to avoid burning time on unrealistically long
-  // inputs; real route strings are always short source-code literals.
+  // 2 - Dynamic Registration (Testing the route creator):
+  // The fuzzer tries to create a brand new, temporary route using the 
+  // random input as the "pattern". This tests if the system stays stable 
+  // when we feed it "garbage" data (like hidden null characters, massive 
+  // strings, or symbols). We must ensure that creating and then 
+  // immediately deleting these "trash" routes doesn't leak memory or 
+  // corrupt the internal data structures.
   if (path_len > 0 && path_len <= 512) {
     char pattern[513];
     memcpy(pattern, path, path_len);

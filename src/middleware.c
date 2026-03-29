@@ -88,7 +88,7 @@ void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, struct ser
     return;
   }
 
-  MiddlewareHandler *combined_handlers = arena_alloc(req->arena, sizeof(MiddlewareHandler) * total_middleware_count);
+  MiddlewareHandler *combined_handlers = ecewo_alloc(req->arena, sizeof(MiddlewareHandler) * total_middleware_count);
 
   if (!combined_handlers) {
     LOG_ERROR("Arena allocation failed for middleware handlers.");
@@ -106,12 +106,12 @@ void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, struct ser
   }
 
   if (middleware_info->middleware_count > 0 && middleware_info->middleware) {
-    arena_memcpy(combined_handlers + idx,
-                 middleware_info->middleware,
-                 sizeof(MiddlewareHandler) * middleware_info->middleware_count);
+    memcpy(combined_handlers + idx,
+           middleware_info->middleware,
+           sizeof(MiddlewareHandler) * middleware_info->middleware_count);
   }
 
-  Chain *chain = arena_alloc(req->arena, sizeof(Chain));
+  Chain *chain = ecewo_alloc(req->arena, sizeof(Chain));
   if (!chain) {
     LOG_ERROR("Arena allocation failed for middleware chain.");
     middleware_info->handler(req, res);

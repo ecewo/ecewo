@@ -29,7 +29,7 @@ void handler_echo_headers(Req *req, Res *res) {
   const char *content_type = ecewo_get_header(req, "Content-Type");
   const char *custom = ecewo_get_header(req, "X-Custom-Header");
 
-  char *response = arena_sprintf(req->arena, "auth=%s,ct=%s,custom=%s",
+  char *response = ecewo_sprintf(req->arena, "auth=%s,ct=%s,custom=%s",
                                  auth ? auth : "null",
                                  content_type ? content_type : "null",
                                  custom ? custom : "null");

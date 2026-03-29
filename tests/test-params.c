@@ -31,7 +31,7 @@ void handler_single_param(Req *req, Res *res) {
     ecewo_send_text(res, 400, "Missing id");
     return;
   }
-  char *response = arena_sprintf(req->arena, "id=%s", id);
+  char *response = ecewo_sprintf(req->arena, "id=%s", id);
   ecewo_send_text(res, 200, response);
 }
 
@@ -45,7 +45,7 @@ void handler_multi_param(Req *req, Res *res) {
     return;
   }
 
-  char *response = arena_sprintf(req->arena, "%s/%s/%s", userId, postId, commentId);
+  char *response = ecewo_sprintf(req->arena, "%s/%s/%s", userId, postId, commentId);
   ecewo_send_text(res, 200, response);
 }
 
@@ -61,7 +61,7 @@ void handler_overflow_param(Req *req, Res *res) {
   const char *id9 = ecewo_get_param(req, "id9");
   const char *id10 = ecewo_get_param(req, "id10");
 
-  char *response = arena_sprintf(req->arena, "%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
+  char *response = ecewo_sprintf(req->arena, "%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
                                  id1, id2, id3, id4, id5, id6, id7, id8, id9, id10);
 
   ecewo_send_text(res, 200, response);

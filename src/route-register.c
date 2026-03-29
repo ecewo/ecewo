@@ -42,7 +42,7 @@
                                                                             \
     MiddlewareHandler *mw = NULL;                                           \
     if (mw_count > 0) {                                                     \
-      mw = arena_alloc(app->arena, sizeof(MiddlewareHandler) * mw_count);   \
+      mw = ecewo_alloc(app->arena, sizeof(MiddlewareHandler) * mw_count);   \
       if (!mw) {                                                            \
         LOG_ERROR("Middleware allocation failed");                          \
         va_end(args);                                                       \
@@ -67,7 +67,7 @@
       return;                                                               \
     }                                                                       \
                                                                             \
-    MiddlewareInfo *info = arena_alloc(app->arena, sizeof(MiddlewareInfo)); \
+    MiddlewareInfo *info = ecewo_alloc(app->arena, sizeof(MiddlewareInfo)); \
     if (!info)                                                              \
       return;                                                               \
     memset(info, 0, sizeof(MiddlewareInfo));                                \

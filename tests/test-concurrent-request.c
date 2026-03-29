@@ -27,7 +27,7 @@
 void handler_counter(Req *req, Res *res) {
   static int counter = 0;
   counter++;
-  char *response = arena_sprintf(req->arena, "%d", counter);
+  char *response = ecewo_sprintf(req->arena, "%d", counter);
   ecewo_send_text(res, 200, response);
 }
 

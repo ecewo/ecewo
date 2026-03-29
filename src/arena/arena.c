@@ -58,7 +58,7 @@ bool new_region_to(ArenaRegion **begin, ArenaRegion **end, size_t capacity) {
   return true;
 }
 
-void *arena_alloc(Arena *arena, size_t size_bytes) {
+void *ecewo_alloc(Arena *arena, size_t size_bytes) {
   size_t size = (size_bytes + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
 
   if (arena->end == NULL) {
@@ -92,11 +92,11 @@ void *arena_alloc(Arena *arena, size_t size_bytes) {
   return result;
 }
 
-void *arena_realloc(Arena *arena, void *oldptr, size_t oldsz, size_t newsz) {
+void *ecewo_realloc(Arena *arena, void *oldptr, size_t oldsz, size_t newsz) {
   if (newsz <= oldsz)
     return oldptr;
 
-  void *newptr = arena_alloc(arena, newsz);
+  void *newptr = ecewo_alloc(arena, newsz);
 
   if (!newptr)
     return NULL;
@@ -117,7 +117,7 @@ static size_t arena_strlen(const char *s) {
 }
 
 // TODO: Remove it in v4
-void *arena_memcpy(void *dest, const void *src, size_t n) {
+void *memcpy(void *dest, const void *src, size_t n) {
   char *d = dest;
   const char *s = src;
 
@@ -127,33 +127,33 @@ void *arena_memcpy(void *dest, const void *src, size_t n) {
   return dest;
 }
 
-char *arena_strdup(Arena *arena, const char *cstr) {
+char *ecewo_strdup(Arena *arena, const char *cstr) {
   if (!cstr)
     return NULL;
 
   size_t n = arena_strlen(cstr);
-  char *dup = (char *)arena_alloc(arena, n + 1);
+  char *dup = (char *)ecewo_alloc(arena, n + 1);
 
   if (!dup)
     return NULL;
 
-  arena_memcpy(dup, cstr, n);
+  memcpy(dup, cstr, n);
   dup[n] = '\0';
   return dup;
 }
 
-void *arena_memdup(Arena *arena, void *data, size_t size) {
+void *ecewo_memdup(Arena *arena, void *data, size_t size) {
   if (!data || size == 0)
     return NULL;
 
-  void *ptr = arena_alloc(arena, size);
+  void *ptr = ecewo_alloc(arena, size);
   if (!ptr)
     return NULL;
 
-  return arena_memcpy(ptr, data, size);
+  return memcpy(ptr, data, size);
 }
 
-char *arena_sprintf(Arena *arena, const char *format, ...) {
+char *ecewo_sprintf(Arena *arena, const char *format, ...) {
   va_list args, args_copy;
   va_start(args, format);
   va_copy(args_copy, args);
@@ -165,7 +165,7 @@ char *arena_sprintf(Arena *arena, const char *format, ...) {
     return NULL;
   }
 
-  char *result = (char *)arena_alloc(arena, n + 1);
+  char *result = (char *)ecewo_alloc(arena, n + 1);
 
   if (!result) {
     va_end(args);
@@ -178,15 +178,15 @@ char *arena_sprintf(Arena *arena, const char *format, ...) {
   return result;
 }
 
-void arena_free(Arena *a) {
-  ArenaRegion *r = a->begin;
+void ecewo_free(Arena *arena) {
+  ArenaRegion *r = arena->begin;
   while (r) {
     ArenaRegion *r0 = r;
     r = r->next;
     free_region(r0);
   }
-  a->begin = NULL;
-  a->end = NULL;
+  arena->begin = NULL;
+  arena->end = NULL;
 }
 
 void arena_reset(Arena *a) {

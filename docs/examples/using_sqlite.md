@@ -204,10 +204,10 @@ void add_user(Req *req, Res *res) {
     }
 
     // Create context using arena
-    AddUserContext *ctx = arena_alloc(res->arena, sizeof(AddUserContext));
-    ctx->name = arena_strdup(res->arena, name);
-    ctx->username = arena_strdup(res->arena, username);
-    ctx->password = arena_strdup(res->arena, password);
+    AddUserContext *ctx = ecewo_alloc(res->arena, sizeof(AddUserContext));
+    ctx->name = ecewo_strdup(res->arena, name);
+    ctx->username = ecewo_strdup(res->arena, username);
+    ctx->password = ecewo_strdup(res->arena, password);
 
     cJSON_Delete(json);
 
@@ -310,7 +310,7 @@ void get_users_done(Res *res, void *context) {
 
 // Handler - runs on main thread
 void get_all_users(Req *req, Res *res) {
-    GetUsersContext *ctx = arena_alloc(res->arena, sizeof(GetUsersContext));
+    GetUsersContext *ctx = ecewo_alloc(res->arena, sizeof(GetUsersContext));
     ctx->json_array = NULL;
     ctx->status = 500;
     ctx->error_message = "Unknown error";

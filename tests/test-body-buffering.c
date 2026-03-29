@@ -25,7 +25,7 @@
 #include "tester.h"
 
 void handler_body(Req *req, Res *res) {
-  char *response = arena_sprintf(req->arena, "received=%zu", req->body_len);
+  char *response = ecewo_sprintf(req->arena, "received=%zu", req->body_len);
   ecewo_send_text(res, 200, response);
 }
 

@@ -73,7 +73,7 @@ void ecewo_set_context(Req *req, const char *key, void *data) {
     return;
 
   if (!req->ctx) {
-    req->ctx = arena_alloc(req->arena, sizeof(context_t));
+    req->ctx = ecewo_alloc(req->arena, sizeof(context_t));
     if (!req->ctx)
       return;
     memset(req->ctx, 0, sizeof(context_t));
@@ -91,7 +91,7 @@ void ecewo_set_context(Req *req, const char *key, void *data) {
   if (ctx->count >= ctx->capacity) {
     uint32_t new_capacity = ctx->capacity == 0 ? 8 : ctx->capacity * 2;
 
-    context_entry_t *new_entries = arena_realloc(
+    context_entry_t *new_entries = ecewo_realloc(
         req->arena,
         ctx->entries,
         ctx->capacity * sizeof(context_entry_t),
@@ -108,7 +108,7 @@ void ecewo_set_context(Req *req, const char *key, void *data) {
 
   context_entry_t *entry = &ctx->entries[ctx->count];
 
-  entry->key = arena_strdup(req->arena, key);
+  entry->key = ecewo_strdup(req->arena, key);
   if (!entry->key)
     return;
 

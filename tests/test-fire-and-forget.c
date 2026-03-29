@@ -35,14 +35,14 @@ typedef struct {
 static void background_work(void *context) {
   background_ctx_t *ctx = context;
   background_counter += ctx->increment;
-  arena_return(ctx->arena);
+  ecewo_arena_return(ctx->arena);
 }
 
 void handler_fire_and_forget(Req *req, Res *res) {
   (void)req;
-  Arena *bg_arena = arena_borrow();
+  Arena *bg_arena = ecewo_arena_borrow();
 
-  background_ctx_t *ctx = arena_alloc(bg_arena, sizeof(background_ctx_t));
+  background_ctx_t *ctx = ecewo_alloc(bg_arena, sizeof(background_ctx_t));
   ctx->arena = bg_arena;
   ctx->increment = 10;
 
@@ -52,7 +52,7 @@ void handler_fire_and_forget(Req *req, Res *res) {
 
 void handler_check_counter(Req *req, Res *res) {
   (void)req;
-  char *response = arena_sprintf(req->arena, "Counter: %d", background_counter);
+  char *response = ecewo_sprintf(req->arena, "Counter: %d", background_counter);
   ecewo_send_text(res, 200, response);
 }
 

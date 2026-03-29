@@ -90,7 +90,7 @@ static int ensure_buffer_capacity(Arena *arena, char **buffer, size_t *capacity,
   if (new_capacity == 0 || new_capacity < total_needed)
     return -2;
 
-  char *new_buffer = arena_realloc(arena, *buffer, *capacity, new_capacity);
+  char *new_buffer = ecewo_realloc(arena, *buffer, *capacity, new_capacity);
   if (!new_buffer)
     return -1;
 
@@ -119,7 +119,7 @@ static void parse_query(Arena *arena, const char *query_start, size_t query_len,
   }
 
   query->capacity = param_count;
-  query->items = arena_alloc(arena, query->capacity * sizeof(request_item_t));
+  query->items = ecewo_alloc(arena, query->capacity * sizeof(request_item_t));
   if (!query->items) {
     query->capacity = 0;
     return;
@@ -149,7 +149,7 @@ static void parse_query(Arena *arena, const char *query_start, size_t query_len,
       size_t key_len = eq - key_start;
       size_t val_len = pair_end - (eq + 1);
 
-      char *key = arena_alloc(arena, key_len + 1);
+      char *key = ecewo_alloc(arena, key_len + 1);
       if (key) {
         memcpy(key, key_start, key_len);
         key[key_len] = '\0';
@@ -158,7 +158,7 @@ static void parse_query(Arena *arena, const char *query_start, size_t query_len,
       }
 
       if (val_len > 0) {
-        char *value = arena_alloc(arena, val_len + 1);
+        char *value = ecewo_alloc(arena, val_len + 1);
         if (value) {
           memcpy(value, eq + 1, val_len);
           value[val_len] = '\0';
@@ -268,7 +268,7 @@ int ensure_array_capacity(Arena *arena, request_t *array) {
   size_t old_size = array->capacity * sizeof(request_item_t);
   size_t new_size = new_capacity * sizeof(request_item_t);
 
-  request_item_t *new_items = arena_realloc(arena, array->items, old_size, new_size);
+  request_item_t *new_items = ecewo_realloc(arena, array->items, old_size, new_size);
   if (!new_items)
     return -1;
 
@@ -298,7 +298,7 @@ int on_header_value_cb(llhttp_t *parser, const char *at, size_t length) {
     return HPE_INTERNAL;
   }
 
-  char *key = arena_alloc(context->arena, context->header_field_length + 1);
+  char *key = ecewo_alloc(context->arena, context->header_field_length + 1);
   if (!key) {
     llhttp_set_error_reason(parser, ERROR_REASON_MEMORY_ALLOCATION);
     return HPE_INTERNAL;
@@ -307,7 +307,7 @@ int on_header_value_cb(llhttp_t *parser, const char *at, size_t length) {
   memcpy(key, context->current_header_field, context->header_field_length);
   key[context->header_field_length] = '\0';
 
-  char *val = arena_alloc(context->arena, length + 1);
+  char *val = ecewo_alloc(context->arena, length + 1);
   if (!val) {
     llhttp_set_error_reason(parser, ERROR_REASON_MEMORY_ALLOCATION);
     return HPE_INTERNAL;
@@ -461,27 +461,27 @@ void http_context_init(http_context_t *context,
   context->parser->data = context;
 
   context->url_capacity = 512;
-  context->url = arena_alloc(arena, context->url_capacity);
+  context->url = ecewo_alloc(arena, context->url_capacity);
   if (context->url)
     context->url[0] = '\0';
 
   context->method_capacity = 32;
-  context->method = arena_alloc(arena, context->method_capacity);
+  context->method = ecewo_alloc(arena, context->method_capacity);
   if (context->method)
     context->method[0] = '\0';
 
   context->header_field_capacity = 128;
-  context->current_header_field = arena_alloc(arena, context->header_field_capacity);
+  context->current_header_field = ecewo_alloc(arena, context->header_field_capacity);
   if (context->current_header_field)
     context->current_header_field[0] = '\0';
 
   context->body_capacity = 1024;
-  context->body = arena_alloc(arena, context->body_capacity);
+  context->body = ecewo_alloc(arena, context->body_capacity);
   if (context->body)
     context->body[0] = '\0';
 
   context->headers.capacity = 32;
-  context->headers.items = arena_alloc(arena, context->headers.capacity * sizeof(request_item_t));
+  context->headers.items = ecewo_alloc(arena, context->headers.capacity * sizeof(request_item_t));
   if (context->headers.items)
     memset(context->headers.items, 0, context->headers.capacity * sizeof(request_item_t));
 

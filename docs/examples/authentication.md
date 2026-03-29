@@ -278,7 +278,7 @@ void handle_protected_route(Req *req, Res *res) {
 
    if (user_id && strcmp(user_id, STATIC_USER_ID) == 0)
    {
-      char *welcome_message = arena_sprintf(res->arena, "Welcome, %s", STATIC_NAME);
+      char *welcome_message = ecewo_sprintf(res->arena, "Welcome, %s", STATIC_NAME);
       ecewo_send_text(res, OK, welcome_message);
    }
    else

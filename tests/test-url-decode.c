@@ -45,7 +45,7 @@ static void search_handler(Req *req, Res *res) {
 static void param_and_query_handler(Req *req, Res *res) {
   const char *name = ecewo_get_param(req, "name");
   const char *q = ecewo_get_query(req, "q");
-  char *response = arena_sprintf(req->arena, "name=%s,q=%s",
+  char *response = ecewo_sprintf(req->arena, "name=%s,q=%s",
                                  name ? name : "null",
                                  q ? q : "null");
   ecewo_send_text(res, 200, response);

@@ -42,7 +42,7 @@ static int extract_url_params(Arena *arena, const route_match_t *match, request_
 
   url_params->capacity = match->param_count;
   url_params->count = match->param_count;
-  url_params->items = arena_alloc(arena, sizeof(request_item_t) * url_params->capacity);
+  url_params->items = ecewo_alloc(arena, sizeof(request_item_t) * url_params->capacity);
   if (!url_params->items) {
     url_params->capacity = 0;
     url_params->count = 0;
@@ -55,16 +55,16 @@ static int extract_url_params(Arena *arena, const route_match_t *match, request_
     const string_view_t *key_sv = &source[i].key;
     const string_view_t *value_sv = &source[i].value;
 
-    char *key = arena_alloc(arena, key_sv->len + 1);
+    char *key = ecewo_alloc(arena, key_sv->len + 1);
     if (!key)
       return -1;
-    arena_memcpy(key, key_sv->data, key_sv->len);
+    memcpy(key, key_sv->data, key_sv->len);
     key[key_sv->len] = '\0';
 
-    char *value = arena_alloc(arena, value_sv->len + 1);
+    char *value = ecewo_alloc(arena, value_sv->len + 1);
     if (!value)
       return -1;
-    arena_memcpy(value, value_sv->data, value_sv->len);
+    memcpy(value, value_sv->data, value_sv->len);
     value[value_sv->len] = '\0';
     url_decode(value, false);
 
@@ -79,7 +79,7 @@ static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket, struct ser
   if (!request_arena)
     return NULL;
 
-  Req *req = arena_alloc(request_arena, sizeof(Req));
+  Req *req = ecewo_alloc(request_arena, sizeof(Req));
   if (!req)
     return NULL;
 
@@ -97,7 +97,7 @@ static Res *create_res(Arena *request_arena, uv_tcp_t *client_socket) {
   if (!request_arena)
     return NULL;
 
-  Res *res = arena_alloc(request_arena, sizeof(Res));
+  Res *res = ecewo_alloc(request_arena, sizeof(Res));
   if (!res)
     return NULL;
 
@@ -105,7 +105,7 @@ static Res *create_res(Arena *request_arena, uv_tcp_t *client_socket) {
   res->arena = request_arena;
   res->client_socket = client_socket;
   res->status = 200;
-  res->content_type = arena_strdup(request_arena, "text/plain");
+  res->content_type = ecewo_strdup(request_arena, "text/plain");
   res->keep_alive = 1;
   res->is_head_request = false;
 
@@ -119,28 +119,28 @@ static int populate_req_from_context(Req *req, http_context_t *ctx, const char *
   Arena *arena = req->arena;
 
   if (ctx->method && ctx->method_length > 0) {
-    req->method = arena_alloc(arena, ctx->method_length + 1);
+    req->method = ecewo_alloc(arena, ctx->method_length + 1);
     if (!req->method)
       return -1;
-    arena_memcpy(req->method, ctx->method, ctx->method_length);
+    memcpy(req->method, ctx->method, ctx->method_length);
     req->method[ctx->method_length] = '\0';
 
     req->is_head_request = (ctx->method_length == 4 && memcmp(ctx->method, "HEAD", 4) == 0);
   }
 
   if (path && path_len > 0) {
-    req->path = arena_alloc(arena, path_len + 1);
+    req->path = ecewo_alloc(arena, path_len + 1);
     if (!req->path)
       return -1;
-    arena_memcpy(req->path, path, path_len);
+    memcpy(req->path, path, path_len);
     req->path[path_len] = '\0';
   }
 
   if (ctx->body && ctx->body_length > 0) {
-    req->body = arena_alloc(arena, ctx->body_length + 1);
+    req->body = ecewo_alloc(arena, ctx->body_length + 1);
     if (!req->body)
       return -1;
-    arena_memcpy(req->body, ctx->body, ctx->body_length);
+    memcpy(req->body, ctx->body, ctx->body_length);
     req->body[ctx->body_length] = '\0';
     req->body_len = ctx->body_length;
   }

@@ -26,11 +26,11 @@
 #include <string.h>
 
 
-// TEST 1: arena_alloc: basic allocation
+// TEST 1: ecewo_alloc: basic allocation
 int test_arena_alloc_basic(void) {
   Arena a = {0};
 
-  void *p = arena_alloc(&a, 64);
+  void *p = ecewo_alloc(&a, 64);
   ASSERT_NOT_NULL(p);
 
   // Write and read back to verify the memory is usable
@@ -40,17 +40,17 @@ int test_arena_alloc_basic(void) {
     ASSERT_EQ(0xAB, bytes[i]);
   }
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 2: arena_alloc: multiple allocations do not overlap
+// TEST 2: ecewo_alloc: multiple allocations do not overlap
 int test_arena_alloc_no_overlap(void) {
   Arena a = {0};
 
-  int *x = arena_alloc(&a, sizeof(int));
-  int *y = arena_alloc(&a, sizeof(int));
+  int *x = ecewo_alloc(&a, sizeof(int));
+  int *y = ecewo_alloc(&a, sizeof(int));
   ASSERT_NOT_NULL(x);
   ASSERT_NOT_NULL(y);
   ASSERT_TRUE(x != y);
@@ -60,153 +60,153 @@ int test_arena_alloc_no_overlap(void) {
   ASSERT_EQ(42, *x);
   ASSERT_EQ(99, *y);
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 3: arena_alloc: allocation larger than default region size forces a new region
+// TEST 3: ecewo_alloc: allocation larger than default region size forces a new region
 int test_arena_alloc_large(void) {
   Arena a = {0};
 
   // 64 KiB is the default ARENA_REGION_SIZE
   size_t large = 64UL * 1024UL + 1;
-  void *p = arena_alloc(&a, large);
+  void *p = ecewo_alloc(&a, large);
   ASSERT_NOT_NULL(p);
 
   memset(p, 0, large);  // should not crash
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 4: arena_realloc: newsz <= oldsz returns the same pointer
+// TEST 4: ecewo_realloc: newsz <= oldsz returns the same pointer
 int test_arena_realloc_shrink(void) {
   Arena a = {0};
 
-  void *p = arena_alloc(&a, 128);
+  void *p = ecewo_alloc(&a, 128);
   ASSERT_NOT_NULL(p);
 
-  void *q = arena_realloc(&a, p, 128, 64);
+  void *q = ecewo_realloc(&a, p, 128, 64);
   ASSERT_TRUE(q == p);
 
-  void *r = arena_realloc(&a, p, 128, 128);
+  void *r = ecewo_realloc(&a, p, 128, 128);
   ASSERT_TRUE(r == p);
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 5: arena_realloc: grow copies existing data
+// TEST 5: ecewo_realloc: grow copies existing data
 int test_arena_realloc_grow(void) {
   Arena a = {0};
 
-  char *p = arena_alloc(&a, 4);
+  char *p = ecewo_alloc(&a, 4);
   ASSERT_NOT_NULL(p);
   p[0] = 'h'; p[1] = 'i'; p[2] = '!'; p[3] = '\0';
 
-  char *q = arena_realloc(&a, p, 4, 8);
+  char *q = ecewo_realloc(&a, p, 4, 8);
   ASSERT_NOT_NULL(q);
   ASSERT_EQ_STR("hi!", q);
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 6: arena_strdup: NULL input returns NULL
+// TEST 6: ecewo_strdup: NULL input returns NULL
 int test_arena_strdup_null(void) {
   Arena a = {0};
 
-  char *p = arena_strdup(&a, NULL);
+  char *p = ecewo_strdup(&a, NULL);
   ASSERT_NULL(p);
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 7: arena_strdup: duplicates string correctly
+// TEST 7: ecewo_strdup: duplicates string correctly
 int test_arena_strdup_basic(void) {
   Arena a = {0};
 
   const char *orig = "hello, world";
-  char *dup = arena_strdup(&a, orig);
+  char *dup = ecewo_strdup(&a, orig);
   ASSERT_NOT_NULL(dup);
   ASSERT_EQ_STR(orig, dup);
 
   // Must be a distinct pointer
   ASSERT_TRUE((void *)dup != (void *)orig);
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 8: arena_strdup: empty string
+// TEST 8: ecewo_strdup: empty string
 int test_arena_strdup_empty(void) {
   Arena a = {0};
 
-  char *dup = arena_strdup(&a, "");
+  char *dup = ecewo_strdup(&a, "");
   ASSERT_NOT_NULL(dup);
   ASSERT_EQ_STR("", dup);
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 9: arena_memdup: NULL data or zero size returns NULL
+// TEST 9: ecewo_memdup: NULL data or zero size returns NULL
 int test_arena_memdup_null(void) {
   Arena a = {0};
 
-  ASSERT_NULL(arena_memdup(&a, NULL, 8));
-  ASSERT_NULL(arena_memdup(&a, "x", 0));
+  ASSERT_NULL(ecewo_memdup(&a, NULL, 8));
+  ASSERT_NULL(ecewo_memdup(&a, "x", 0));
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 10: arena_memdup: duplicates binary data correctly
+// TEST 10: ecewo_memdup: duplicates binary data correctly
 int test_arena_memdup_basic(void) {
   Arena a = {0};
 
   uint8_t src[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-  uint8_t *dst = arena_memdup(&a, src, sizeof(src));
+  uint8_t *dst = ecewo_memdup(&a, src, sizeof(src));
   ASSERT_NOT_NULL(dst);
   ASSERT_TRUE((void *)dst != (void *)src);
   ASSERT_EQ(0, memcmp(src, dst, sizeof(src)));
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 11: arena_sprintf: multi-argument format
+// TEST 11: ecewo_sprintf: multi-argument format
 int test_arena_sprintf_multi(void) {
   Arena a = {0};
 
-  char *s = arena_sprintf(&a, "%s:%d", "port", 8080);
+  char *s = ecewo_sprintf(&a, "%s:%d", "port", 8080);
   ASSERT_NOT_NULL(s);
   ASSERT_EQ_STR("port:8080", s);
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 12: arena_free: zeroes begin and end pointers
+// TEST 12: ecewo_free: zeroes begin and end pointers
 int test_arena_free(void) {
   Arena a = {0};
 
-  void *p = arena_alloc(&a, 32);
+  void *p = ecewo_alloc(&a, 32);
   ASSERT_NOT_NULL(p);
   ASSERT_NOT_NULL(a.begin);
 
-  arena_free(&a);
+  ecewo_free(&a);
   ASSERT_NULL(a.begin);
   ASSERT_NULL(a.end);
 
@@ -214,7 +214,7 @@ int test_arena_free(void) {
 }
 
 
-// TEST 13: arena_da_append: capacity doubles on overflow (forces realloc past ARENA_DA_INIT_CAP=256)
+// TEST 13: ecewo_da_append: capacity doubles on overflow (forces realloc past ARENA_DA_INIT_CAP=256)
 typedef struct {
   int *items;
   size_t count;
@@ -227,7 +227,7 @@ int test_arena_da_append_growth(void) {
 
   // Fill past initial capacity (ARENA_DA_INIT_CAP = 256) to force a realloc
   for (int i = 0; i < 300; i++) {
-    arena_da_append(&a, &arr, i);
+    ecewo_da_append(&a, &arr, i);
   }
 
   ASSERT_EQ(300, (int64_t)arr.count);
@@ -237,18 +237,18 @@ int test_arena_da_append_growth(void) {
     ASSERT_EQ(i, arr.items[i]);
   }
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 
 
-// TEST 14: arena_da_append_many: bulk append
+// TEST 14: ecewo_da_append_many: bulk append
 int test_arena_da_append_many(void) {
   Arena a = {0};
   IntArray arr = {0};
 
   int batch[] = {10, 20, 30, 40, 50};
-  arena_da_append_many(&a, &arr, batch, 5);
+  ecewo_da_append_many(&a, &arr, batch, 5);
 
   ASSERT_EQ(5, (int64_t)arr.count);
   for (int i = 0; i < 5; i++) {
@@ -257,12 +257,12 @@ int test_arena_da_append_many(void) {
 
   // Append a second batch
   int batch2[] = {60, 70};
-  arena_da_append_many(&a, &arr, batch2, 2);
+  ecewo_da_append_many(&a, &arr, batch2, 2);
   ASSERT_EQ(7, (int64_t)arr.count);
   ASSERT_EQ(60, arr.items[5]);
   ASSERT_EQ(70, arr.items[6]);
 
-  arena_free(&a);
+  ecewo_free(&a);
   RETURN_OK();
 }
 

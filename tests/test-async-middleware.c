@@ -43,9 +43,9 @@ static void auth_work(void *context) {
 static void auth_done(Res *res, void *context) {
   mw_ctx_t *ctx = context;
 
-  user_ctx_t *user = arena_alloc(res->arena, sizeof(user_ctx_t));
-  user->user_id = arena_strdup(res->arena, "user123");
-  user->role = arena_strdup(res->arena, "admin");
+  user_ctx_t *user = ecewo_alloc(res->arena, sizeof(user_ctx_t));
+  user->user_id = ecewo_strdup(res->arena, "user123");
+  user->role = ecewo_strdup(res->arena, "admin");
 
   ecewo_set_context(ctx->req, "user", user);
 
@@ -60,7 +60,7 @@ void middleware_async_auth(Req *req, Res *res, Next next) {
     return;
   }
 
-  mw_ctx_t *ctx = arena_alloc(req->arena, sizeof(mw_ctx_t));
+  mw_ctx_t *ctx = ecewo_alloc(req->arena, sizeof(mw_ctx_t));
   ctx->req = req;
   ctx->next = next;
 
@@ -75,7 +75,7 @@ void handler_protected(Req *req, Res *res) {
     return;
   }
 
-  char *response = arena_sprintf(req->arena,
+  char *response = ecewo_sprintf(req->arena,
                                  "Welcome %s (role: %s)",
                                  user->user_id,
                                  user->role);

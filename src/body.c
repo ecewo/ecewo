@@ -63,7 +63,7 @@ static StreamCtx *get_or_create_ctx(Req *req) {
   if (ctx)
     return ctx;
 
-  ctx = arena_alloc(req->arena, sizeof(StreamCtx));
+  ctx = ecewo_alloc(req->arena, sizeof(StreamCtx));
   if (!ctx)
     return NULL;
 

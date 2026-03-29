@@ -218,7 +218,7 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
 
   char *all_headers = NULL;
   if (headers_size > 0) {
-    all_headers = arena_alloc(res->arena, headers_size + 1);
+    all_headers = ecewo_alloc(res->arena, headers_size + 1);
     if (!all_headers) {
       send_error(res->arena, res->client_socket, 500);
       return;
@@ -242,14 +242,14 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
     }
     all_headers[pos] = '\0';
   } else {
-    all_headers = arena_strdup(res->arena, "");
+    all_headers = ecewo_strdup(res->arena, "");
     if (!all_headers) {
       send_error(res->arena, res->client_socket, 500);
       return;
     }
   }
 
-  char *headers = arena_sprintf(res->arena,
+  char *headers = ecewo_sprintf(res->arena,
                                 "HTTP/1.1 %d\r\n"
                                 "Date: %s\r\n"
                                 "%s"
@@ -285,7 +285,7 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
   // another request and reset the arena,
   // but uv_write() might not be completed yet.
   // Therefore write_req must be
-  // allocated via malloc, not arena_alloc!
+  // allocated via malloc, not ecewo_alloc!
   // Otherwise, it may cause segfault
   // under a high load.
   write_req_t *write_req = malloc(sizeof(write_req_t));
@@ -408,7 +408,7 @@ void ecewo_set_header(Res *res, const char *name, const char *value) {
   if (res->header_count >= res->header_capacity) {
     uint16_t new_cap = res->header_capacity ? res->header_capacity * 2 : 8;
 
-    http_header_t *tmp = arena_realloc(res->arena, res->headers,
+    http_header_t *tmp = ecewo_realloc(res->arena, res->headers,
                                        res->header_capacity * sizeof(http_header_t),
                                        new_cap * sizeof(http_header_t));
 
@@ -424,8 +424,8 @@ void ecewo_set_header(Res *res, const char *name, const char *value) {
     res->header_capacity = new_cap;
   }
 
-  res->headers[res->header_count].name = arena_strdup(res->arena, name);
-  res->headers[res->header_count].value = arena_strdup(res->arena, value);
+  res->headers[res->header_count].name = ecewo_strdup(res->arena, name);
+  res->headers[res->header_count].value = ecewo_strdup(res->arena, value);
 
   if (!res->headers[res->header_count].name || !res->headers[res->header_count].value) {
     LOG_ERROR("Failed to allocate memory in ecewo_set_header");

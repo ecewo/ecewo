@@ -38,19 +38,18 @@ typedef struct {
   size_t capacity;
 } StringBuilder;
 
-void *arena_alloc(Arena *arena, size_t size_bytes);
-void *arena_realloc(Arena *arena, void *oldptr, size_t oldsz, size_t newsz);
-char *arena_strdup(Arena *arena, const char *cstr);
-void *arena_memdup(Arena *arena, void *data, size_t size);
-char *arena_sprintf(Arena *arena, const char *format, ...);
-void *arena_memcpy(void *dest, const void *src, size_t n); // TODO: Remove in v4
-void arena_free(Arena *a);
+void *ecewo_alloc(Arena *arena, size_t size_bytes);
+void *ecewo_realloc(Arena *arena, void *oldptr, size_t oldsz, size_t newsz);
+char *ecewo_strdup(Arena *arena, const char *cstr);
+void *ecewo_memdup(Arena *arena, void *data, size_t size);
+char *ecewo_sprintf(Arena *arena, const char *format, ...);
+void ecewo_free(Arena *arena);
 
-Arena *arena_borrow(void);
-void arena_return(Arena *arena);
+Arena *ecewo_arena_borrow(void);
+void ecewo_arena_return(Arena *arena);
 
 #ifdef ECEWO_DEBUG
-void arena_pool_stats(void);
+void ecewo_arena_pool_stats(void);
 #endif
 
 #ifndef ARENA_DA_INIT_CAP
@@ -63,11 +62,11 @@ void arena_pool_stats(void);
 #define cast_ptr(...)
 #endif
 
-#define arena_da_append(a, da, item)                                                      \
+#define ecewo_da_append(a, da, item)                                                      \
   do {                                                                                    \
     if ((da)->count >= (da)->capacity) {                                                  \
       size_t new_capacity = (da)->capacity == 0 ? ARENA_DA_INIT_CAP : (da)->capacity * 2; \
-      (da)->items = cast_ptr((da)->items) arena_realloc(                                  \
+      (da)->items = cast_ptr((da)->items) ecewo_realloc(                                  \
           (a), (da)->items,                                                               \
           (da)->capacity * sizeof(*(da)->items),                                          \
           new_capacity * sizeof(*(da)->items));                                           \
@@ -77,7 +76,7 @@ void arena_pool_stats(void);
     (da)->items[(da)->count++] = (item);                                                  \
   } while (0)
 
-#define arena_da_append_many(a, da, new_items, new_items_count)                               \
+#define ecewo_da_append_many(a, da, new_items, new_items_count)                               \
   do {                                                                                        \
     if ((da)->count + (new_items_count) > (da)->capacity) {                                   \
       size_t new_capacity = (da)->capacity;                                                   \
@@ -85,7 +84,7 @@ void arena_pool_stats(void);
         new_capacity = ARENA_DA_INIT_CAP;                                                     \
       while ((da)->count + (new_items_count) > new_capacity)                                  \
         new_capacity *= 2;                                                                    \
-      (da)->items = cast_ptr((da)->items) arena_realloc(                                      \
+      (da)->items = cast_ptr((da)->items) ecewo_realloc(                                      \
           (a), (da)->items,                                                                   \
           (da)->capacity * sizeof(*(da)->items),                                              \
           new_capacity * sizeof(*(da)->items));                                               \
@@ -95,13 +94,13 @@ void arena_pool_stats(void);
     (da)->count += (new_items_count);                                                         \
   } while (0)
 
-#define arena_sb_append_cstr(a, sb, cstr) \
+#define ecewo_sb_append_cstr(a, sb, cstr) \
   do {                                    \
     const char *s = (cstr);               \
     size_t n = strlen(s);                 \
-    arena_da_append_many(a, sb, s, n);    \
+    ecewo_da_append_many(a, sb, s, n);    \
   } while (0)
 
-#define arena_sb_append_null(a, sb) arena_da_append(a, sb, 0)
+#define ecewo_sb_append_null(a, sb) ecewo_da_append(a, sb, 0)
 
 #endif

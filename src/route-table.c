@@ -171,7 +171,7 @@ int tokenize_path(Arena *arena, const char *path, size_t path_len, tokenized_pat
     return 0;
 
   result->count = segment_count;
-  result->segments = arena_alloc(arena, sizeof(path_segment_t) * segment_count);
+  result->segments = ecewo_alloc(arena, sizeof(path_segment_t) * segment_count);
   if (!result->segments)
     return -1;
 
@@ -266,12 +266,12 @@ static int add_param_to_match(route_match_t *match,
   // Switch to arena-allocated storage
   if (match->param_count == MAX_INLINE_PARAMS && !match->params) {
     uint8_t new_cap = MAX_INLINE_PARAMS * 2;
-    param_match_t *new_params = arena_alloc(arena, sizeof(param_match_t) * new_cap);
+    param_match_t *new_params = ecewo_alloc(arena, sizeof(param_match_t) * new_cap);
     if (!new_params) {
       LOG_ERROR("Failed to allocate dynamic param storage");
       return -1;
     }
-    arena_memcpy(new_params, match->inline_params, sizeof(param_match_t) * MAX_INLINE_PARAMS);
+    memcpy(new_params, match->inline_params, sizeof(param_match_t) * MAX_INLINE_PARAMS);
     match->params = new_params;
     match->param_capacity = new_cap;
     LOG_DEBUG("Route params overflow: switched to dynamic allocation (%d params)", new_cap);
@@ -284,7 +284,7 @@ static int add_param_to_match(route_match_t *match,
       LOG_ERROR("Route parameter limit exceeded: %d", new_cap);
       return -1;
     }
-    param_match_t *new_params = arena_realloc(arena,
+    param_match_t *new_params = ecewo_realloc(arena,
                                               match->params,
                                               sizeof(param_match_t) * match->param_capacity,
                                               sizeof(param_match_t) * new_cap);

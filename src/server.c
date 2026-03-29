@@ -58,7 +58,7 @@ static void client_free_internal(client_t *client) {
   if (!client)
     return;
   if (client->connection_arena)
-    arena_return(client->connection_arena);
+    ecewo_arena_return(client->connection_arena);
   free(client);
 }
 
@@ -269,7 +269,7 @@ static int client_connection_init(client_t *client) {
   if (!client)
     return -1;
 
-  client->connection_arena = arena_borrow();
+  client->connection_arena = ecewo_arena_borrow();
   if (!client->connection_arena)
     return -1;
 
@@ -481,7 +481,7 @@ static void server_cleanup(struct server_t *srv) {
   reset_middleware(srv);
 
   if (srv->app && srv->app->arena) {
-    arena_return(srv->app->arena);
+    ecewo_arena_return(srv->app->arena);
     srv->app->arena = NULL;
   }
 
@@ -853,7 +853,7 @@ static void on_connection(uv_stream_t *server, int status) {
 
   if (uv_tcp_init(srv->loop, &client->handle) != 0) {
     if (client->connection_arena)
-      arena_return(client->connection_arena);
+      ecewo_arena_return(client->connection_arena);
     free(client);
     return;
   }
@@ -918,7 +918,7 @@ App *ecewo_create(void) {
     return NULL;
   }
 
-  app->arena = arena_borrow();
+  app->arena = ecewo_arena_borrow();
   if (!app->arena) {
     LOG_ERROR("App arena allocation failed");
     arena_pool_destroy();

@@ -28,7 +28,7 @@
 void handler_body(Req *req, Res *res) {
   const char *body_str = req->body ? (const char *)req->body : "0";
 
-  char *response = arena_sprintf(req->arena,
+  char *response = ecewo_sprintf(req->arena,
                                  "len=%zu, body=%s, method=%s",
                                  req->body_len,
                                  body_str,

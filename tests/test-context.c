@@ -43,9 +43,9 @@ void context_middleware(Req *req, Res *res, Next next) {
     return;
   }
 
-  user_ctx_t *ctx = arena_alloc(req->arena, sizeof(user_ctx_t));
-  ctx->user_id = arena_strdup(req->arena, "user123");
-  ctx->role = arena_strdup(req->arena, "admin");
+  user_ctx_t *ctx = ecewo_alloc(req->arena, sizeof(user_ctx_t));
+  ctx->user_id = ecewo_strdup(req->arena, "user123");
+  ctx->role = ecewo_strdup(req->arena, "admin");
 
   ecewo_set_context(req, "user_ctx", ctx);
 
@@ -185,7 +185,7 @@ void handler_multiple_keys(Req *req, Res *res) {
   const char *v2 = ecewo_get_context(req, "key2");
   const char *v3 = ecewo_get_context(req, "key3");
 
-  char *response = arena_sprintf(req->arena, "%s,%s,%s", v1, v2, v3);
+  char *response = ecewo_sprintf(req->arena, "%s,%s,%s", v1, v2, v3);
   ecewo_send_text(res, 200, response);
 }
 
@@ -247,7 +247,7 @@ void handler_chain_context(Req *req, Res *res) {
   const char *v1 = ecewo_get_context(req, "mw1");
   const char *v2 = ecewo_get_context(req, "mw2");
 
-  char *response = arena_sprintf(req->arena, "%s,%s",
+  char *response = ecewo_sprintf(req->arena, "%s,%s",
                                  v1 ? v1 : "null",
                                  v2 ? v2 : "null");
 
@@ -282,10 +282,10 @@ typedef struct
 } complex_user_t;
 
 void handler_complex_data(Req *req, Res *res) {
-  complex_user_t *user = arena_alloc(req->arena, sizeof(complex_user_t));
+  complex_user_t *user = ecewo_alloc(req->arena, sizeof(complex_user_t));
   user->id = 123;
-  user->name = arena_strdup(req->arena, "John Doe");
-  user->email = arena_strdup(req->arena, "john@example.com");
+  user->name = ecewo_strdup(req->arena, "John Doe");
+  user->email = ecewo_strdup(req->arena, "john@example.com");
   user->is_admin = true;
 
   ecewo_set_context(req, "user", user);
@@ -293,7 +293,7 @@ void handler_complex_data(Req *req, Res *res) {
   // Retrieve and verify
   complex_user_t *retrieved = ecewo_get_context(req, "user");
 
-  char *response = arena_sprintf(req->arena,
+  char *response = ecewo_sprintf(req->arena,
                                  "id:%d,name:%s,email:%s,admin:%s",
                                  retrieved->id,
                                  retrieved->name,

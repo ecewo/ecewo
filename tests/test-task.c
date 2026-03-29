@@ -37,12 +37,12 @@ static void compute_work(void *context) {
 static void compute_done(void *context) {
   compute_ctx_t *ctx = (compute_ctx_t *)context;
 
-  char *response = arena_sprintf(ctx->res->arena, "result=%d", ctx->result);
+  char *response = ecewo_sprintf(ctx->res->arena, "result=%d", ctx->result);
   ecewo_send_text(ctx->res, 200, response);
 }
 
 void handler_compute(Req *req, Res *res) {
-  compute_ctx_t *ctx = arena_alloc(req->arena, sizeof(compute_ctx_t));
+  compute_ctx_t *ctx = ecewo_alloc(req->arena, sizeof(compute_ctx_t));
   ctx->res = res;
   ctx->result = 0;
 
