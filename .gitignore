@@ -5,3 +5,4 @@ build-tsan
 build-valgrind
 build-fuzz
 fuzz/corpus
+fuzz/reg-corpus

@@ -1,0 +1,35 @@
+# Path structure
+"/"
+"//"
+":"
+"*"
+"."
+"-"
+"_"
+
+# Common segments
+"users"
+"api"
+"v1"
+"v2"
+"posts"
+"id"
+"admin"
+"static"
+"files"
+
+# Realistic segment shapes (slugs, versions, extensions)
+"my-post"
+"user_name"
+"v1.0"
+"index.html"
+"style.css"
+
+# Param/wildcard patterns
+":id"
+":userId"
+":postId"
+":version"
+":resource"
+"/*"
+"/:"

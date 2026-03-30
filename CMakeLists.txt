@@ -217,27 +217,35 @@ if(ECEWO_BUILD_FUZZ)
       "Re-run with -DCMAKE_C_COMPILER=clang")
   endif()
 
-  add_executable(fuzz-router fuzz/fuzz_router.c)
+  foreach(fuzz_target fuzz-router fuzz-route-register)
+    if(fuzz_target STREQUAL "fuzz-router")
+      set(fuzz_src fuzz/fuzz-router.c)
+    else()
+      set(fuzz_src fuzz/fuzz-route-register.c)
+    endif()
 
-  target_compile_options(fuzz-router PRIVATE
-    -fsanitize=fuzzer,address,undefined
-    -fno-omit-frame-pointer
-    -g
-  )
+    add_executable(${fuzz_target} ${fuzz_src})
 
-  target_link_options(fuzz-router PRIVATE
-    -fsanitize=fuzzer,address,undefined
-  )
+    target_compile_options(${fuzz_target} PRIVATE
+      -fsanitize=fuzzer,address,undefined
+      -fno-omit-frame-pointer
+      -g
+    )
 
-  target_link_libraries(fuzz-router PRIVATE ecewo::ecewo)
+    target_link_options(${fuzz_target} PRIVATE
+      -fsanitize=fuzzer,address,undefined
+    )
 
-  target_include_directories(fuzz-router PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/arena
-    ${CMAKE_BINARY_DIR}/_deps/llhttp-src/include
-  )
+    target_link_libraries(${fuzz_target} PRIVATE ecewo::ecewo)
 
-  message(STATUS "Fuzz target: fuzz-router")
+    target_include_directories(${fuzz_target} PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/arena
+      ${CMAKE_BINARY_DIR}/_deps/llhttp-src/include
+    )
+
+    message(STATUS "Fuzz target: ${fuzz_target}")
+  endforeach()
 endif()
 
 if(ECEWO_BUILD_TESTS)
