@@ -426,6 +426,7 @@ int on_headers_complete_cb(llhttp_t *parser) {
       context->path_length = qmark - context->url;
       size_t qlen = context->url_length - context->path_length - 1;
       parse_query(context->arena, qmark + 1, qlen, &context->query_params);
+      context->url[context->path_length] = '\0';
     } else {
       context->path_length = context->url_length;
     }

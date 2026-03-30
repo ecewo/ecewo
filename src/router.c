@@ -116,34 +116,13 @@ static int populate_req_from_context(Req *req, http_context_t *ctx, const char *
   if (!req || !ctx)
     return -1;
 
-  Arena *arena = req->arena;
-
   if (ctx->method && ctx->method_length > 0) {
-    req->method = ecewo_alloc(arena, ctx->method_length + 1);
-    if (!req->method)
-      return -1;
-    memcpy(req->method, ctx->method, ctx->method_length);
-    req->method[ctx->method_length] = '\0';
-
+    req->method = ctx->method;
     req->is_head_request = (ctx->method_length == 4 && memcmp(ctx->method, "HEAD", 4) == 0);
   }
 
-  if (path && path_len > 0) {
-    req->path = ecewo_alloc(arena, path_len + 1);
-    if (!req->path)
-      return -1;
-    memcpy(req->path, path, path_len);
-    req->path[path_len] = '\0';
-  }
-
-  if (ctx->body && ctx->body_length > 0) {
-    req->body = ecewo_alloc(arena, ctx->body_length + 1);
-    if (!req->body)
-      return -1;
-    memcpy(req->body, ctx->body, ctx->body_length);
-    req->body[ctx->body_length] = '\0';
-    req->body_len = ctx->body_length;
-  }
+  if (path && path_len > 0)
+    req->path = ctx->url;
 
   req->http_major = ctx->http_major;
   req->http_minor = ctx->http_minor;
