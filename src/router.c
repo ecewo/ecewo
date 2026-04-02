@@ -75,7 +75,7 @@ static int extract_url_params(Arena *arena, const route_match_t *match, request_
   return 0;
 }
 
-static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket, struct server_t *srv) {
+static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket, server_t *srv) {
   if (!request_arena)
     return NULL;
 
@@ -140,7 +140,7 @@ static void noop_route_handler(Req *req, Res *res) {
 }
 
 // Matches a route and invokes the handler/middleware chain.
-static int dispatch(struct server_t *srv,
+static int dispatch(server_t *srv,
                     Arena *arena,
                     uv_tcp_t *handle,
                     http_context_t *ctx,
@@ -323,7 +323,7 @@ int router(client_t *client, const char *request_data, size_t request_len) {
 
   ecewo_client_ref(client);
 
-  struct server_t *srv = client->srv;
+  server_t *srv = client->srv;
   uv_tcp_t *handle = (uv_tcp_t *)&client->handle;
   http_context_t *ctx = &client->persistent_context;
   Arena *arena = client->connection_arena;

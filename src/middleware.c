@@ -68,7 +68,7 @@ static void execute_next(Req *req, Res *res) {
   }
 }
 
-void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, struct server_t *srv) {
+void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, server_t *srv) {
   if (!req || !res || !middleware_info || !middleware_info->handler)
     return;
 
@@ -139,7 +139,7 @@ void __ecewo_register_use(App *app, const char *path, MiddlewareHandler middlewa
     abort();
   }
 
-  struct server_t *srv = app->internal;
+  server_t *srv = app->internal;
 
   if (srv->global_middleware_count >= srv->global_middleware_capacity) {
     int new_cap = srv->global_middleware_capacity
@@ -159,7 +159,7 @@ void __ecewo_register_use(App *app, const char *path, MiddlewareHandler middlewa
   srv->global_middleware_count++;
 }
 
-void reset_middleware(struct server_t *srv) {
+void reset_middleware(server_t *srv) {
   if (!srv)
     return;
 

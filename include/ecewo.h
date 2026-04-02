@@ -37,12 +37,12 @@ typedef struct uv_timer_s uv_timer_t;
 typedef struct uv_tcp_s uv_tcp_t;
 typedef uv_timer_t Timer;
 
-// Do not access directly
 typedef struct client_s client_t;
-
-// Opaque internal server state
-// Do not access directly
-struct server_t;
+typedef struct server_s server_t;
+typedef struct request_item_s request_item_t;
+typedef struct request_s request_t;
+typedef struct context_s context_t;
+typedef struct http_header_s http_header_t;
 
 // Create with ecewo_create()
 typedef struct App {
@@ -53,19 +53,14 @@ typedef struct App {
   uint64_t request_timeout_ms; // default: 0 (disabled)
   uint64_t cleanup_interval_ms; // default: 30000
   uint64_t shutdown_timeout_ms; // default: 15000
-
+  
   // App-lifetime arena: use for plugin configs, middleware state, any app-scoped data.
   // Freed automatically at shutdown. Never reset between requests.
   Arena *arena;
-
+  
   // Internal state, do not touch
-  struct server_t *internal;
+  server_t *internal;
 } App;
-
-typedef struct request_item_s request_item_t;
-typedef struct request_s request_t;
-typedef struct context_s context_t;
-typedef struct http_header_s http_header_t;
 
 typedef struct Req {
   App *app;

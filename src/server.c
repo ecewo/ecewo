@@ -34,7 +34,7 @@
 // Used by functions called from handlers that have no direct app reference
 // (set_timeout, set_interval, get_loop, increment/decrement_async_work).
 // TODO: We might need to add the app param to those functions too
-static struct server_t *g_srv = NULL;
+static server_t *g_srv = NULL;
 
 typedef enum {
   SERVER_OK = 0,
@@ -76,12 +76,12 @@ void ecewo_client_unref(client_t *client) {
     client_free_internal(client);
 }
 
-static void add_client_to_list(struct server_t *srv, client_t *client) {
+static void add_client_to_list(server_t *srv, client_t *client) {
   client->next = srv->client_list_head;
   srv->client_list_head = client;
 }
 
-static void remove_client_from_list(struct server_t *srv, client_t *client) {
+static void remove_client_from_list(server_t *srv, client_t *client) {
   if (!client)
     return;
 
@@ -104,7 +104,7 @@ static void on_client_closed(uv_handle_t *handle) {
   if (!client)
     return;
 
-  struct server_t *srv = client->srv;
+  server_t *srv = client->srv;
   if (srv) {
     remove_client_from_list(srv, client);
     if (srv->active_connections > 0)
@@ -181,7 +181,7 @@ static void close_client(client_t *client) {
 }
 
 static void cleanup_idle_connections(uv_timer_t *handle) {
-  struct server_t *srv = (struct server_t *)handle->data;
+  server_t *srv = (server_t *)handle->data;
   if (!srv || srv->shutdown_requested)
     return;
 
@@ -206,7 +206,7 @@ static void cleanup_idle_connections(uv_timer_t *handle) {
   }
 }
 
-static int start_cleanup_timer(struct server_t *srv) {
+static int start_cleanup_timer(server_t *srv) {
   srv->cleanup_timer = malloc(sizeof(uv_timer_t));
   if (!srv->cleanup_timer)
     return -1;
@@ -229,7 +229,7 @@ static int start_cleanup_timer(struct server_t *srv) {
   return 0;
 }
 
-static void stop_cleanup_timer(struct server_t *srv) {
+static void stop_cleanup_timer(server_t *srv) {
   if (srv->cleanup_timer) {
     uv_timer_stop(srv->cleanup_timer);
     uv_close((uv_handle_t *)srv->cleanup_timer, (uv_close_cb)free);
@@ -350,7 +350,7 @@ static void close_walk_cb(uv_handle_t *handle, void *arg) {
 }
 
 static void on_server_closed(uv_handle_t *handle) {
-  struct server_t *srv = (struct server_t *)handle->data;
+  server_t *srv = (server_t *)handle->data;
   free(handle);
   if (srv) {
     srv->tcp_server = NULL;
@@ -363,7 +363,7 @@ static void on_async_work_noop(uv_async_t *handle) {
 }
 
 static void on_force_close_timeout(uv_timer_t *handle) {
-  struct server_t *srv = (struct server_t *)handle->data;
+  server_t *srv = (server_t *)handle->data;
   uv_timer_stop(handle);
   uv_close((uv_handle_t *)handle, (uv_close_cb)free);
   if (!srv)
@@ -384,7 +384,7 @@ void ecewo_shutdown(App *app) {
   if (!app || !app->internal)
     return;
 
-  struct server_t *srv = app->internal;
+  server_t *srv = app->internal;
 
   if (srv->shutdown_requested)
     return;
@@ -452,7 +452,7 @@ void ecewo_shutdown(App *app) {
 static void inspect_loop(uv_loop_t *loop);
 #endif
 
-static void server_cleanup(struct server_t *srv) {
+static void server_cleanup(server_t *srv) {
   if (!srv || !srv->initialized)
     return;
 
@@ -510,13 +510,13 @@ static void global_server_cleanup(void) {
 }
 
 static void on_async_shutdown(uv_async_t *handle) {
-  struct server_t *srv = (struct server_t *)handle->data;
+  server_t *srv = (server_t *)handle->data;
   if (srv)
     ecewo_shutdown(srv->app);
 }
 
 static void on_signal(uv_signal_t *handle, int signum) {
-  struct server_t *srv = (struct server_t *)handle->data;
+  server_t *srv = (server_t *)handle->data;
 
   if (!srv || srv->shutdown_requested)
     return;
@@ -719,7 +719,7 @@ void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
   if (!client)
     return;
 
-  struct server_t *srv = client->srv;
+  server_t *srv = client->srv;
 
   if (client->draining) {
     if (nread < 0) {
@@ -819,7 +819,7 @@ static void on_connection(uv_stream_t *server, int status) {
     return;
   }
 
-  struct server_t *srv = (struct server_t *)server->data;
+  server_t *srv = (server_t *)server->data;
   if (!srv)
     return;
 
@@ -890,7 +890,7 @@ App *ecewo_create(void) {
   app->cleanup_interval_ms = 30000;
   app->shutdown_timeout_ms = 15000;
 
-  struct server_t *srv = calloc(1, sizeof(struct server_t));
+  server_t *srv = calloc(1, sizeof(server_t));
   if (!srv) {
     free(app);
     return NULL;
@@ -991,7 +991,7 @@ int ecewo_bind(App *app, uint16_t port) {
   if (!app || !app->internal)
     return SERVER_NOT_INITIALIZED;
 
-  struct server_t *srv = app->internal;
+  server_t *srv = app->internal;
 
   if (port == 0) {
     LOG_ERROR("Invalid port %" PRIu16 " (must be 1-65535)", port);
@@ -1056,7 +1056,7 @@ void ecewo_run(App *app) {
   if (!app || !app->internal)
     return;
 
-  struct server_t *srv = app->internal;
+  server_t *srv = app->internal;
 
   if (!srv->initialized || !srv->running) {
     LOG_ERROR("Server not initialized or not listening");

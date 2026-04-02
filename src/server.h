@@ -34,7 +34,7 @@
 #define READ_BUFFER_SIZE 16384
 #endif
 
-struct server_t {
+struct server_s {
   App *app;
   bool initialized;
   bool running;
@@ -99,7 +99,7 @@ struct client_s {
   Res *stream_res;
 
   // Pointer back to the server that owns this client
-  struct server_t *srv;
+  server_t *srv;
 };
 
 void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
