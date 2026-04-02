@@ -128,14 +128,14 @@ void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, server_t *
   execute_next(req, res);
 }
 
-void __ecewo_register_use(App *app, const char *path, MiddlewareHandler middleware_handler) {
+void ecewo__register_use(App *app, const char *path, MiddlewareHandler middleware_handler) {
   if (!middleware_handler) {
     LOG_ERROR("NULL middleware handler");
     abort();
   }
 
   if (!app || !app->internal) {
-    LOG_ERROR("NULL app in __ecewo_register_use");
+    LOG_ERROR("NULL app in ecewo__register_use");
     abort();
   }
 
