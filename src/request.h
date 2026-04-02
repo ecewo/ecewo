@@ -23,13 +23,30 @@
 #define ECEWO_REQUEST_H
 
 #include <stddef.h>
+#include <stdint.h>
+
+struct request_item_s {
+  const char *key;
+  const char *value;
+};
+
+struct request_s {
+  struct request_item_s *items;
+  uint16_t count;
+  uint16_t capacity;
+};
+
+struct http_header_s {
+  const char *name;
+  const char *value;
+};
 
 typedef struct {
   char *key;
   void *data;
 } context_entry_t;
 
-struct context_t {
+struct context_s {
   context_entry_t *entries;
   uint32_t count;
   uint32_t capacity;

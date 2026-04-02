@@ -23,6 +23,7 @@
 #define ECEWO_HTTP_H
 
 #include "ecewo.h"
+#include "request.h"
 #include "llhttp.h"
 
 #ifndef BUFFERED_BODY_MAX_SIZE

@@ -51,21 +51,21 @@ const char *ecewo_get_param(const Req *req, const char *key) {
   if (!req)
     return NULL;
 
-  return get_req(&req->params, key, false);
+  return get_req(req->params, key, false);
 }
 
 const char *ecewo_get_query(const Req *req, const char *key) {
   if (!req)
     return NULL;
 
-  return get_req(&req->query, key, false);
+  return get_req(req->query, key, false);
 }
 
 const char *ecewo_get_header(const Req *req, const char *key) {
   if (!req)
     return NULL;
 
-  return get_req(&req->headers, key, true);
+  return get_req(req->headers, key, true);
 }
 
 void ecewo_set_context(Req *req, const char *key, void *data) {

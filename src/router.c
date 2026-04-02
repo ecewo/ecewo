@@ -127,8 +127,8 @@ static int populate_req_from_context(Req *req, http_context_t *ctx, const char *
   req->http_major = ctx->http_major;
   req->http_minor = ctx->http_minor;
 
-  req->headers = ctx->headers;
-  req->query = ctx->query_params;
+  req->headers = &ctx->headers;
+  req->query = &ctx->query_params;
 
   return 0;
 }
@@ -221,9 +221,19 @@ static int dispatch(struct server_t *srv,
     return 0;
   }
 
-  if (extract_url_params(arena, &match, &req->params) != 0) {
-    send_error(arena, handle, 500);
-    return -1;
+  if (match.param_count > 0) {
+    request_t *params = ecewo_alloc(arena, sizeof(request_t));
+    if (!params) {
+      send_error(arena, handle, 500);
+      return -1;
+    }
+    memset(params, 0, sizeof(request_t));
+    req->params = params;
+
+    if (extract_url_params(arena, &match, req->params) != 0) {
+      send_error(arena, handle, 500);
+      return -1;
+    }
   }
 
   if (!match.handler) {

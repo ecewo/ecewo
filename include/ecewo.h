@@ -62,21 +62,10 @@ typedef struct App {
   struct server_t *internal;
 } App;
 
-// Internal struct, do not use it
-typedef struct {
-  const char *key;
-  const char *value;
-} request_item_t;
-
-// Internal struct, do not use it
-typedef struct {
-  request_item_t *items;
-  uint16_t count;
-  uint16_t capacity;
-} request_t;
-
-// Do not access directly
-typedef struct context_t context_t;
+typedef struct request_item_s request_item_t;
+typedef struct request_s request_t;
+typedef struct context_s context_t;
+typedef struct http_header_s http_header_t;
 
 typedef struct Req {
   App *app;
@@ -86,21 +75,15 @@ typedef struct Req {
   char *path;
   uint8_t *body;
   size_t body_len;
-  request_t headers;
-  request_t query;
-  request_t params;
+  request_t *headers;
+  request_t *query;
+  request_t *params;
   context_t *ctx;
   uint8_t http_major;
   uint8_t http_minor;
   bool is_head_request;
   void *chain;
 } Req;
-
-// Internal struct, do not use it
-typedef struct {
-  const char *name;
-  const char *value;
-} http_header_t;
 
 typedef struct Res {
   Arena *arena;
