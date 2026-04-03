@@ -29,11 +29,11 @@
 #include "logger.h"
 #include <stdlib.h> // for strtol
 
-extern void send_error(Arena *request_arena, uv_tcp_t *client_socket, int error_code);
-extern void body_stream_complete(Req *req);
+extern void send_error(ecewo_arena_t *request_arena, uv_tcp_t *ecewo__client_socket, int error_code);
+extern void body_stream_complete(ecewo_request_t *req);
 
 // Extracts URL parameters from a previously matched route
-static int extract_url_params(Arena *arena, const route_match_t *match, request_t *url_params) {
+static int extract_url_params(ecewo_arena_t *arena, const route_match_t *match, ecewo__req_t *url_params) {
   if (!arena || !match || !url_params)
     return -1;
 
@@ -42,7 +42,7 @@ static int extract_url_params(Arena *arena, const route_match_t *match, request_
 
   url_params->capacity = match->param_count;
   url_params->count = match->param_count;
-  url_params->items = ecewo_alloc(arena, sizeof(request_item_t) * url_params->capacity);
+  url_params->items = ecewo_alloc(arena, sizeof(ecewo__req_item_t) * url_params->capacity);
   if (!url_params->items) {
     url_params->capacity = 0;
     url_params->count = 0;
@@ -75,17 +75,17 @@ static int extract_url_params(Arena *arena, const route_match_t *match, request_
   return 0;
 }
 
-static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket, server_t *srv) {
+static ecewo_request_t *create_req(ecewo_arena_t *request_arena, uv_tcp_t *ecewo__client_socket, ecewo__server_t *srv) {
   if (!request_arena)
     return NULL;
 
-  Req *req = ecewo_alloc(request_arena, sizeof(Req));
+  ecewo_request_t *req = ecewo_alloc(request_arena, sizeof(ecewo_request_t));
   if (!req)
     return NULL;
 
-  memset(req, 0, sizeof(Req));
+  memset(req, 0, sizeof(ecewo_request_t));
   req->arena = request_arena;
-  req->client_socket = client_socket;
+  req->ecewo__client_socket = ecewo__client_socket;
   req->is_head_request = false;
   req->ctx = NULL;
   req->app = srv ? srv->app : NULL;
@@ -93,17 +93,17 @@ static Req *create_req(Arena *request_arena, uv_tcp_t *client_socket, server_t *
   return req;
 }
 
-static Res *create_res(Arena *request_arena, uv_tcp_t *client_socket) {
+static ecewo_response_t *create_res(ecewo_arena_t *request_arena, uv_tcp_t *ecewo__client_socket) {
   if (!request_arena)
     return NULL;
 
-  Res *res = ecewo_alloc(request_arena, sizeof(Res));
+  ecewo_response_t *res = ecewo_alloc(request_arena, sizeof(ecewo_response_t));
   if (!res)
     return NULL;
 
-  memset(res, 0, sizeof(Res));
+  memset(res, 0, sizeof(ecewo_response_t));
   res->arena = request_arena;
-  res->client_socket = client_socket;
+  res->ecewo__client_socket = ecewo__client_socket;
   res->status = 200;
   res->content_type = ecewo_strdup(request_arena, "text/plain");
   res->keep_alive = 1;
@@ -112,7 +112,7 @@ static Res *create_res(Arena *request_arena, uv_tcp_t *client_socket) {
   return res;
 }
 
-static int populate_req_from_context(Req *req, http_context_t *ctx, const char *path, size_t path_len) {
+static int populate_req_from_context(ecewo_request_t *req, http_context_t *ctx, const char *path, size_t path_len) {
   if (!req || !ctx)
     return -1;
 
@@ -134,23 +134,23 @@ static int populate_req_from_context(Req *req, http_context_t *ctx, const char *
 }
 
 // Empty handler for running global middleware only (OPTIONS preflight / CORS)
-static void noop_route_handler(Req *req, Res *res) {
+static void noop_route_handler(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   (void)res;
 }
 
 // Matches a route and invokes the handler/middleware chain.
-static int dispatch(server_t *srv,
-                    Arena *arena,
+static int dispatch(ecewo__server_t *srv,
+                    ecewo_arena_t *arena,
                     uv_tcp_t *handle,
                     http_context_t *ctx,
-                    client_t *client,
+                    ecewo__client_t *client,
                     const char *path,
                     size_t path_len,
-                    Req **req_out,
-                    Res **res_out) {
-  Req *req = create_req(arena, handle, srv);
-  Res *res = create_res(arena, handle);
+                    ecewo_request_t **req_out,
+                    ecewo_response_t **res_out) {
+  ecewo_request_t *req = create_req(arena, handle, srv);
+  ecewo_response_t *res = create_res(arena, handle);
   if (!req || !res) {
     send_error(arena, handle, 500);
     return -1;
@@ -222,12 +222,12 @@ static int dispatch(server_t *srv,
   }
 
   if (match.param_count > 0) {
-    request_t *params = ecewo_alloc(arena, sizeof(request_t));
+    ecewo__req_t *params = ecewo_alloc(arena, sizeof(ecewo__req_t));
     if (!params) {
       send_error(arena, handle, 500);
       return -1;
     }
-    memset(params, 0, sizeof(request_t));
+    memset(params, 0, sizeof(ecewo__req_t));
     req->params = params;
 
     if (extract_url_params(arena, &match, req->params) != 0) {
@@ -314,7 +314,7 @@ static int dispatch(server_t *srv,
   return 0;
 }
 
-int router(client_t *client, const char *request_data, size_t request_len) {
+int router(ecewo__client_t *client, const char *request_data, size_t request_len) {
   if (!client || !request_data || request_len == 0) {
     if (client)
       send_error(NULL, (uv_tcp_t *)&client->handle, 400);
@@ -323,10 +323,10 @@ int router(client_t *client, const char *request_data, size_t request_len) {
 
   ecewo_client_ref(client);
 
-  server_t *srv = client->srv;
+  ecewo__server_t *srv = client->srv;
   uv_tcp_t *handle = (uv_tcp_t *)&client->handle;
   http_context_t *ctx = &client->persistent_context;
-  Arena *arena = client->connection_arena;
+  ecewo_arena_t *arena = client->connection_arena;
 
   int retval = REQUEST_CLOSE;
 
@@ -348,8 +348,8 @@ int router(client_t *client, const char *request_data, size_t request_len) {
       path_len = 1;
     }
 
-    Req *req = NULL;
-    Res *res = NULL;
+    ecewo_request_t *req = NULL;
+    ecewo_response_t *res = NULL;
 
     if (dispatch(srv, arena, handle, ctx, client, path, path_len, &req, &res) != 0)
       goto done;
@@ -393,8 +393,8 @@ int router(client_t *client, const char *request_data, size_t request_len) {
         body_stream_complete(req);
       } else if (client->handler_pending) {
         client->handler_pending = false;
-        Req *preq = client->pending_req;
-        Res *pres = client->pending_res;
+        ecewo_request_t *preq = client->pending_req;
+        ecewo_response_t *pres = client->pending_res;
         if (preq && pres) {
           preq->body = ctx->body_length > 0 ? ctx->body : NULL;
           preq->body_len = ctx->body_length;
@@ -408,7 +408,7 @@ int router(client_t *client, const char *request_data, size_t request_len) {
       if (!client->valid)
         goto done;
       {
-        Res *final_res = (client->pending_res && client->pending_res->replied)
+        ecewo_response_t *final_res = (client->pending_res && client->pending_res->replied)
             ? client->pending_res
             : res;
         if (final_res && !final_res->replied) {
@@ -467,8 +467,8 @@ int router(client_t *client, const char *request_data, size_t request_len) {
   // deferred. Call the complete cb on the saved req
   // instead of dispatching a fresh req/res
   if (ctx->on_body_chunk && client->stream_req) {
-    Req *sreq = client->stream_req;
-    Res *sres = client->stream_res;
+    ecewo_request_t *sreq = client->stream_req;
+    ecewo_response_t *sres = client->stream_res;
     client->stream_req = NULL;
     client->stream_res = NULL;
     body_stream_complete(sreq);
@@ -502,8 +502,8 @@ int router(client_t *client, const char *request_data, size_t request_len) {
       path_len = 1;
     }
 
-    Req *req = NULL;
-    Res *res = NULL;
+    ecewo_request_t *req = NULL;
+    ecewo_response_t *res = NULL;
 
     if (dispatch(srv, arena, handle, ctx, client, path, path_len, &req, &res) != 0)
       goto done;

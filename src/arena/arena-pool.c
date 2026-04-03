@@ -46,7 +46,7 @@
 #endif
 
 typedef struct {
-  Arena *arenas[ARENA_POOL_CAP];
+  ecewo_arena_t *arenas[ARENA_POOL_CAP];
   uint16_t head;
   uint16_t total_allocated;
 
@@ -55,7 +55,7 @@ typedef struct {
   uint16_t grow_count;
   uint16_t shrink_count;
 #endif
-
+  // TODO: Find a way to enable mutex only when it's needed
   uv_mutex_t mutex;
   bool initialized;
 } arena_pool_t;
@@ -82,7 +82,7 @@ static void arena_pool_try_grow(void) {
 #endif
 
   for (uint8_t i = 0; i < to_allocate; i++) {
-    Arena *arena = malloc(sizeof(Arena));
+    ecewo_arena_t *arena = malloc(sizeof(ecewo_arena_t));
     if (!arena)
       break;
 
@@ -131,7 +131,7 @@ static void arena_pool_try_shrink(void) {
 #endif
 
   while (to_free > 0 && arena_pool.head > target) {
-    Arena *arena = arena_pool.arenas[--arena_pool.head];
+    ecewo_arena_t *arena = arena_pool.arenas[--arena_pool.head];
     arena_pool.arenas[arena_pool.head] = NULL;
 
     if (arena) {
@@ -215,7 +215,7 @@ void arena_pool_init(void) {
 #endif
 
   for (uint16_t i = 0; i < preallocate; i++) {
-    Arena *arena = malloc(sizeof(Arena));
+    ecewo_arena_t *arena = malloc(sizeof(ecewo_arena_t));
     if (!arena) {
       LOG_DEBUG("Failed to allocate arena %d/%d, stopping pre-allocation",
                 i + 1, preallocate);
@@ -283,10 +283,10 @@ void arena_pool_destroy(void) {
   LOG_DEBUG("Arena pool destroyed");
 }
 
-Arena *ecewo_arena_borrow(void) {
+ecewo_arena_t *ecewo_arena_borrow(void) {
   uv_mutex_lock(&arena_pool.mutex);
 
-  Arena *arena;
+  ecewo_arena_t *arena;
 
   if (arena_pool.head > 0) {
     // Take from pool
@@ -316,7 +316,7 @@ Arena *ecewo_arena_borrow(void) {
   }
 
   // Allocate new arena
-  arena = malloc(sizeof(Arena));
+  arena = malloc(sizeof(ecewo_arena_t));
   if (!arena) {
     uv_mutex_unlock(&arena_pool.mutex);
     return NULL;
@@ -343,7 +343,7 @@ Arena *ecewo_arena_borrow(void) {
   return arena;
 }
 
-void ecewo_arena_return(Arena *arena) {
+void ecewo_arena_return(ecewo_arena_t *arena) {
   if (!arena)
     return;
 
@@ -355,11 +355,11 @@ void ecewo_arena_return(Arena *arena) {
 
   // Keep only the first region, free the rest
   if (arena->begin && arena->begin->next) {
-    ArenaRegion *to_free = arena->begin->next;
+    arena_region_t *to_free = arena->begin->next;
     arena->begin->next = NULL;
 
     while (to_free) {
-      ArenaRegion *next = to_free->next;
+      arena_region_t *next = to_free->next;
       free(to_free);
       to_free = next;
     }

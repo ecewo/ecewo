@@ -25,12 +25,12 @@
 #include "tester.h"
 #include <string.h>
 
-static void ok_handler(Req *req, Res *res) {
+static void ok_handler(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, 200, "ok");
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/users", ok_handler);
   ECEWO_POST(app, "/users", ok_handler);
   ECEWO_GET(app, "/users/:id", ok_handler);

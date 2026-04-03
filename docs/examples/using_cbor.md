@@ -33,7 +33,7 @@ We did this with JSON in [this example](/examples/using-json#creating-json). Now
 #include "cbor.h"
 #include <stdio.h>
 
-void hello_world_cbor(Req *req, Res *res) {
+void hello_world_cbor(ecewo_request_t *req, ecewo_response_t *res) {
     uint8_t buffer[128]; // Temporary buffer for CBOR output
     // Normally it should be allocated dynamically
 
@@ -57,7 +57,7 @@ void hello_world_cbor(Req *req, Res *res) {
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
@@ -81,7 +81,7 @@ You can see [the exact example](/examples/using-json/#parsing-json) with JSON.
 #include "cbor.h"
 #include <stdio.h>
 
-void handle_user_cbor(Req *req, Res *res) {
+void handle_user_cbor(ecewo_request_t *req, ecewo_response_t *res) {
     const uint8_t *data = (const uint8_t *)req->body;
     size_t data_len = req->body_len; // Length in bytes of the incoming body
 
@@ -164,7 +164,7 @@ cleanup:
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;

@@ -39,10 +39,10 @@ typedef struct {
   uv_write_t req;
   uv_buf_t buf;
   char *data;
-  client_t *client;
+  ecewo__client_t *client;
 } write_req_t;
 
-static void end_request(client_t *client) {
+static void end_request(ecewo__client_t *client) {
   if (!client)
     return;
 
@@ -77,39 +77,39 @@ static void write_completion_cb(uv_write_t *req, int status) {
   free(write_req);
 }
 
-static bool validate_client_for_response(Res *res) {
-  if (!res || !res->client_socket || !res->client_socket->data)
+static bool validate_client_for_response(ecewo_response_t *res) {
+  if (!res || !res->ecewo__client_socket || !res->ecewo__client_socket->data)
     return false;
 
-  if (uv_is_closing((uv_handle_t *)res->client_socket))
+  if (uv_is_closing((uv_handle_t *)res->ecewo__client_socket))
     return false;
 
-  client_t *client = (client_t *)res->client_socket->data;
+  ecewo__client_t *client = (ecewo__client_t *)res->ecewo__client_socket->data;
 
   if (!client->valid || client->closing)
     return false;
 
-  if (!uv_is_writable((uv_stream_t *)res->client_socket))
+  if (!uv_is_writable((uv_stream_t *)res->ecewo__client_socket))
     return false;
 
   return true;
 }
 
 // Sends 400 or 500
-void send_error(Arena *arena, uv_tcp_t *client_socket, int error_code) {
-  if (!client_socket) {
+void send_error(ecewo_arena_t *arena, uv_tcp_t *ecewo__client_socket, int error_code) {
+  if (!ecewo__client_socket) {
     if (arena)
       arena_reset(arena);
     return;
   }
 
-  if (uv_is_closing((uv_handle_t *)client_socket)) {
+  if (uv_is_closing((uv_handle_t *)ecewo__client_socket)) {
     if (arena)
       arena_reset(arena);
     return;
   }
 
-  if (!uv_is_readable((uv_stream_t *)client_socket) || !uv_is_writable((uv_stream_t *)client_socket)) {
+  if (!uv_is_readable((uv_stream_t *)ecewo__client_socket) || !uv_is_writable((uv_stream_t *)ecewo__client_socket)) {
     if (arena)
       arena_reset(arena);
     return;
@@ -160,12 +160,12 @@ void send_error(Arena *arena, uv_tcp_t *client_socket, int error_code) {
 
   memset(write_req, 0, sizeof(write_req_t));
   write_req->data = response;
-  write_req->client = (client_t *)client_socket->data;
+  write_req->client = (ecewo__client_t *)ecewo__client_socket->data;
   if (write_req->client)
     ecewo_client_ref(write_req->client);
   write_req->buf = uv_buf_init(response, (unsigned int)written);
 
-  int res = uv_write(&write_req->req, (uv_stream_t *)client_socket,
+  int res = uv_write(&write_req->req, (uv_stream_t *)ecewo__client_socket,
                      &write_req->buf, 1, write_completion_cb);
 
   if (res < 0) {
@@ -184,7 +184,7 @@ void send_error(Arena *arena, uv_tcp_t *client_socket, int error_code) {
     arena_reset(arena);
 }
 
-void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
+void ecewo_reply(ecewo_response_t *res, int status, const void *body, size_t body_len) {
   if (!res)
     return;
 
@@ -220,7 +220,7 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
   if (headers_size > 0) {
     all_headers = ecewo_alloc(res->arena, headers_size + 1);
     if (!all_headers) {
-      send_error(res->arena, res->client_socket, 500);
+      send_error(res->arena, res->ecewo__client_socket, 500);
       return;
     }
 
@@ -244,7 +244,7 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
   } else {
     all_headers = ecewo_strdup(res->arena, "");
     if (!all_headers) {
-      send_error(res->arena, res->client_socket, 500);
+      send_error(res->arena, res->ecewo__client_socket, 500);
       return;
     }
   }
@@ -263,7 +263,7 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
                                 connection);
 
   if (!headers) {
-    send_error(res->arena, res->client_socket, 500);
+    send_error(res->arena, res->ecewo__client_socket, 500);
     return;
   }
 
@@ -272,7 +272,7 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
 
   char *response = malloc(total_len);
   if (!response) {
-    send_error(res->arena, res->client_socket, 500);
+    send_error(res->arena, res->ecewo__client_socket, 500);
     return;
   }
 
@@ -291,17 +291,17 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
   write_req_t *write_req = malloc(sizeof(write_req_t));
   if (!write_req) {
     free(response);
-    send_error(res->arena, res->client_socket, 500);
+    send_error(res->arena, res->ecewo__client_socket, 500);
     return;
   }
 
   write_req->data = response;
-  write_req->client = (client_t *)res->client_socket->data;
+  write_req->client = (ecewo__client_t *)res->ecewo__client_socket->data;
   if (write_req->client)
     ecewo_client_ref(write_req->client);
   write_req->buf = uv_buf_init(response, (unsigned int)total_len);
 
-  if (uv_is_closing((uv_handle_t *)res->client_socket)) {
+  if (uv_is_closing((uv_handle_t *)res->ecewo__client_socket)) {
     free(response);
     if (write_req->client)
       ecewo_client_unref(write_req->client);
@@ -309,7 +309,7 @@ void ecewo_reply(Res *res, int status, const void *body, size_t body_len) {
     return;
   }
 
-  int result = uv_write(&write_req->req, (uv_stream_t *)res->client_socket,
+  int result = uv_write(&write_req->req, (uv_stream_t *)res->ecewo__client_socket,
                         &write_req->buf, 1, write_completion_cb);
 
   if (result < 0) {
@@ -369,7 +369,7 @@ static bool is_valid_header_value(const char *value) {
   return true;
 }
 
-void ecewo_set_header(Res *res, const char *name, const char *value) {
+void ecewo_set_header(ecewo_response_t *res, const char *name, const char *value) {
   if (!res || !res->arena || !name || !value) {
     LOG_ERROR("Invalid argument(s) to ecewo_set_header");
     return;
@@ -408,9 +408,9 @@ void ecewo_set_header(Res *res, const char *name, const char *value) {
   if (res->header_count >= res->header_capacity) {
     uint16_t new_cap = res->header_capacity ? res->header_capacity * 2 : 8;
 
-    http_header_t *tmp = ecewo_realloc(res->arena, res->headers,
-                                       res->header_capacity * sizeof(http_header_t),
-                                       new_cap * sizeof(http_header_t));
+    ecewo__res_header_t *tmp = ecewo_realloc(res->arena, res->headers,
+                                       res->header_capacity * sizeof(ecewo__res_header_t),
+                                       new_cap * sizeof(ecewo__res_header_t));
 
     if (!tmp) {
       LOG_ERROR("Failed to realloc headers array");
@@ -418,7 +418,7 @@ void ecewo_set_header(Res *res, const char *name, const char *value) {
     }
 
     memset(&tmp[res->header_capacity], 0,
-           (new_cap - res->header_capacity) * sizeof(http_header_t));
+           (new_cap - res->header_capacity) * sizeof(ecewo__res_header_t));
 
     res->headers = tmp;
     res->header_capacity = new_cap;
@@ -435,7 +435,7 @@ void ecewo_set_header(Res *res, const char *name, const char *value) {
   res->header_count++;
 }
 
-void ecewo_redirect(Res *res, int status, const char *url) {
+void ecewo_redirect(ecewo_response_t *res, int status, const char *url) {
   if (!res || !url)
     return;
 

@@ -23,6 +23,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include "http.h"
+#include "request.h"
 #include "utils.h"
 #include "logger.h"
 
@@ -74,7 +75,7 @@ static size_t calculate_next_size(size_t current, size_t needed) {
   return new_size > ABSOLUTE_MAX_REQUEST ? ABSOLUTE_MAX_REQUEST : new_size;
 }
 
-static int ensure_buffer_capacity(Arena *arena, char **buffer, size_t *capacity, size_t current_length, size_t additional_needed) {
+static int ensure_buffer_capacity(ecewo_arena_t *arena, char **buffer, size_t *capacity, size_t current_length, size_t additional_needed) {
   if (!arena || !buffer || !capacity)
     return -1;
 
@@ -99,11 +100,11 @@ static int ensure_buffer_capacity(Arena *arena, char **buffer, size_t *capacity,
   return 0;
 }
 
-static void parse_query(Arena *arena, const char *query_start, size_t query_len, request_t *query) {
+static void parse_query(ecewo_arena_t *arena, const char *query_start, size_t query_len, ecewo__req_t *query) {
   if (!arena || !query)
     return;
 
-  memset(query, 0, sizeof(request_t));
+  memset(query, 0, sizeof(ecewo__req_t));
 
   if (!query_start || query_len == 0)
     return;
@@ -119,7 +120,7 @@ static void parse_query(Arena *arena, const char *query_start, size_t query_len,
   }
 
   query->capacity = param_count;
-  query->items = ecewo_alloc(arena, query->capacity * sizeof(request_item_t));
+  query->items = ecewo_alloc(arena, query->capacity * sizeof(ecewo__req_item_t));
   if (!query->items) {
     query->capacity = 0;
     return;
@@ -247,7 +248,7 @@ int on_header_field_cb(llhttp_t *parser, const char *at, size_t length) {
   return HPE_OK;
 }
 
-int ensure_array_capacity(Arena *arena, request_t *array) {
+int ensure_array_capacity(ecewo_arena_t *arena, ecewo__req_t *array) {
   if (!arena || !array)
     return -1;
 
@@ -265,10 +266,10 @@ int ensure_array_capacity(Arena *arena, request_t *array) {
   if (new_capacity <= array->capacity)
     return -1;
 
-  size_t old_size = array->capacity * sizeof(request_item_t);
-  size_t new_size = new_capacity * sizeof(request_item_t);
+  size_t old_size = array->capacity * sizeof(ecewo__req_item_t);
+  size_t new_size = new_capacity * sizeof(ecewo__req_item_t);
 
-  request_item_t *new_items = ecewo_realloc(arena, array->items, old_size, new_size);
+  ecewo__req_item_t *new_items = ecewo_realloc(arena, array->items, old_size, new_size);
   if (!new_items)
     return -1;
 
@@ -449,7 +450,7 @@ int on_message_complete_cb(llhttp_t *parser) {
 }
 
 void http_context_init(http_context_t *context,
-                       Arena *arena,
+                       ecewo_arena_t *arena,
                        llhttp_t *parser,
                        llhttp_settings_t *settings) {
   if (!context || !arena || !parser || !settings)
@@ -482,9 +483,9 @@ void http_context_init(http_context_t *context,
     context->body[0] = '\0';
 
   context->headers.capacity = 32;
-  context->headers.items = ecewo_alloc(arena, context->headers.capacity * sizeof(request_item_t));
+  context->headers.items = ecewo_alloc(arena, context->headers.capacity * sizeof(ecewo__req_item_t));
   if (context->headers.items)
-    memset(context->headers.items, 0, context->headers.capacity * sizeof(request_item_t));
+    memset(context->headers.items, 0, context->headers.capacity * sizeof(ecewo__req_item_t));
 
   context->keep_alive = 1;
   context->last_error = HPE_OK;

@@ -25,7 +25,7 @@
 #include "tester.h"
 #include <string.h>
 
-void handler_single_param(Req *req, Res *res) {
+void handler_single_param(ecewo_request_t *req, ecewo_response_t *res) {
   const char *id = ecewo_get_param(req, "userId");
   if (!id) {
     ecewo_send_text(res, 400, "Missing id");
@@ -35,7 +35,7 @@ void handler_single_param(Req *req, Res *res) {
   ecewo_send_text(res, 200, response);
 }
 
-void handler_multi_param(Req *req, Res *res) {
+void handler_multi_param(ecewo_request_t *req, ecewo_response_t *res) {
   const char *userId = ecewo_get_param(req, "userId");
   const char *postId = ecewo_get_param(req, "postId");
   const char *commentId = ecewo_get_param(req, "commentId");
@@ -49,7 +49,7 @@ void handler_multi_param(Req *req, Res *res) {
   ecewo_send_text(res, 200, response);
 }
 
-void handler_overflow_param(Req *req, Res *res) {
+void handler_overflow_param(ecewo_request_t *req, ecewo_response_t *res) {
   const char *id1 = ecewo_get_param(req, "id1");
   const char *id2 = ecewo_get_param(req, "id2");
   const char *id3 = ecewo_get_param(req, "id3");
@@ -131,7 +131,7 @@ int test_overflow_param(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/param/:id1/:id2/:id3/:id4/:id5/:id6/:id7/:id8/:id9/:id10", handler_overflow_param);
   ECEWO_GET(app, "/users/:userId/posts/:postId/comments/:commentId", handler_multi_param);
   ECEWO_GET(app, "/users/:userId", handler_single_param);

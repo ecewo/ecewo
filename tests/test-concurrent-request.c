@@ -24,7 +24,7 @@
 #include "ecewo-mock.h"
 #include "tester.h"
 
-void handler_counter(Req *req, Res *res) {
+void handler_counter(ecewo_request_t *req, ecewo_response_t *res) {
   static int counter = 0;
   counter++;
   char *response = ecewo_sprintf(req->arena, "%d", counter);
@@ -51,7 +51,7 @@ int test_sequential_requests(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/counter", handler_counter);
 }
 

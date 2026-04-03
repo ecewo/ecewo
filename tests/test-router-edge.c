@@ -31,7 +31,7 @@
 
 // Route "/:": one segment, is_param=true, param name has length 0.
 // ecewo_get_param(req, "") retrieves the captured value.
-static void bare_colon_handler(Req *req, Res *res) {
+static void bare_colon_handler(ecewo_request_t *req, ecewo_response_t *res) {
   const char *val = ecewo_get_param(req, "");
   ecewo_send_text(res, 200, val ? val : "no-param");
 }
@@ -40,7 +40,7 @@ static void bare_colon_handler(Req *req, Res *res) {
 // The "suffix" literal segment in the pattern is unreachable because
 // match_dynamic_entry returns true as soon as it encounters the '*', consuming
 // all remaining request segments without examining the rest of the pattern.
-static void wildcard_mid_handler(Req *req, Res *res) {
+static void wildcard_mid_handler(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, 200, "wildcard-mid");
 }
@@ -48,12 +48,12 @@ static void wildcard_mid_handler(Req *req, Res *res) {
 // Route "/encoded%2Fpath": a static route whose URL contains the three-byte
 // sequence "%2F". The routing layer never decodes percent-escaped characters,
 // so this only matches requests where those three bytes appear literally.
-static void encoded_handler(Req *req, Res *res) {
+static void encoded_handler(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, 200, "encoded");
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/:", bare_colon_handler);
   ECEWO_GET(app, "/prefix/*/suffix", wildcard_mid_handler);
   ECEWO_GET(app, "/encoded%2Fpath", encoded_handler);

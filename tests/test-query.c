@@ -25,7 +25,7 @@
 #include "tester.h"
 #include <string.h>
 
-void handler_query_params(Req *req, Res *res) {
+void handler_query_params(ecewo_request_t *req, ecewo_response_t *res) {
   const char *page = ecewo_get_query(req, "page");
   const char *limit = ecewo_get_query(req, "limit");
   const char *sort = ecewo_get_query(req, "sort");
@@ -84,7 +84,7 @@ int test_query_no_params(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/search", handler_query_params);
 }
 

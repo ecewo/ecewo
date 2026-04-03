@@ -118,7 +118,7 @@ We already created a 'Users' table in the previously chapter. Now we will add a 
 
 #include "ecewo.h"
 
-void add_user(Req *req, Res *res);
+void add_user(ecewo_request_t *req, ecewo_response_t *res);
 
 #endif
 ```
@@ -172,13 +172,13 @@ void add_user_work(void *context) {
 }
 
 // Callback function - runs on main thread
-void add_user_done(Res *res, void *context) {
+void add_user_done(ecewo_response_t *res, void *context) {
     AddUserContext *ctx = (AddUserContext *)context;
     ecewo_send_text(res, ctx->status, ctx->message);
 }
 
 // Handler function - runs on main thread
-void add_user(Req *req, Res *res) {
+void add_user(ecewo_request_t *req, ecewo_response_t *res) {
     const char *body = req->body;
 
     if (body == NULL) {
@@ -228,8 +228,8 @@ Now we'll write a handler function that gives us these users' information.
 
 #include "ecewo.h"
 
-void get_all_users(Req *req, Res *res); // Add this
-void add_user(Req *req, Res *res);
+void get_all_users(ecewo_request_t *req, ecewo_response_t *res); // Add this
+void add_user(ecewo_request_t *req, ecewo_response_t *res);
 
 #endif
 ```
@@ -293,7 +293,7 @@ void get_users_work(void *context) {
 }
 
 // Callback - runs on main thread
-void get_users_done(Res *res, void *context) {
+void get_users_done(ecewo_response_t *res, void *context) {
     GetUsersContext *ctx = (GetUsersContext *)context;
 
     if (ctx->status != 200 || !ctx->json_array) {
@@ -309,7 +309,7 @@ void get_users_done(Res *res, void *context) {
 }
 
 // Handler - runs on main thread
-void get_all_users(Req *req, Res *res) {
+void get_all_users(ecewo_request_t *req, ecewo_response_t *res) {
     GetUsersContext *ctx = ecewo_alloc(res->arena, sizeof(GetUsersContext));
     ctx->json_array = NULL;
     ctx->status = 500;
@@ -335,7 +335,7 @@ void destroy_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;

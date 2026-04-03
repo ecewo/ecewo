@@ -35,7 +35,7 @@ typedef struct
 // TEST 1: Basic Context (Happy Path)
 // ============================================================================
 
-void context_middleware(Req *req, Res *res, Next next) {
+void context_middleware(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   const char *token = ecewo_get_header(req, "Authorization");
 
   if (!token) {
@@ -52,7 +52,7 @@ void context_middleware(Req *req, Res *res, Next next) {
   next(req, res);
 }
 
-void context_handler(Req *req, Res *res) {
+void context_handler(ecewo_request_t *req, ecewo_response_t *res) {
   user_ctx_t *ctx = (user_ctx_t *)ecewo_get_context(req, "user_ctx");
 
   if (!ctx) {
@@ -93,7 +93,7 @@ int test_context_basic(void) {
 // TEST 2: Missing Context (No Middleware)
 // ============================================================================
 
-void handler_no_middleware(Req *req, Res *res) {
+void handler_no_middleware(ecewo_request_t *req, ecewo_response_t *res) {
   user_ctx_t *ctx = (user_ctx_t *)ecewo_get_context(req, "user_ctx");
 
   if (!ctx) {
@@ -123,7 +123,7 @@ int test_context_missing(void) {
 // TEST 3: Non-Existent Key
 // ============================================================================
 
-void handler_nonexistent_key(Req *req, Res *res) {
+void handler_nonexistent_key(ecewo_request_t *req, ecewo_response_t *res) {
   void *value = ecewo_get_context(req, "nonexistent_key");
 
   ecewo_send_text(res, 200, value ? "found" : "null");
@@ -148,7 +148,7 @@ int test_context_nonexistent_key(void) {
 // TEST 4: Context Overwrite
 // ============================================================================
 
-void handler_overwrite(Req *req, Res *res) {
+void handler_overwrite(ecewo_request_t *req, ecewo_response_t *res) {
   ecewo_set_context(req, "test", "value1");
   ecewo_set_context(req, "test", "value2"); // Should overwrite
 
@@ -176,7 +176,7 @@ int test_context_overwrite(void) {
 // TEST 5: Multiple Keys
 // ============================================================================
 
-void handler_multiple_keys(Req *req, Res *res) {
+void handler_multiple_keys(ecewo_request_t *req, ecewo_response_t *res) {
   ecewo_set_context(req, "key1", "a");
   ecewo_set_context(req, "key2", "b");
   ecewo_set_context(req, "key3", "c");
@@ -208,7 +208,7 @@ int test_context_multiple_keys(void) {
 // TEST 6: NULL Data
 // ============================================================================
 
-void handler_null_data(Req *req, Res *res) {
+void handler_null_data(ecewo_request_t *req, ecewo_response_t *res) {
   ecewo_set_context(req, "test", NULL);
   void *value = ecewo_get_context(req, "test");
   ecewo_send_text(res, 200, value == NULL ? "null" : "not-null");
@@ -233,17 +233,17 @@ int test_context_null_data(void) {
 // TEST 7: Middleware Chain Context Sharing
 // ============================================================================
 
-void middleware_first_ctx(Req *req, Res *res, Next next) {
+void middleware_first_ctx(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   ecewo_set_context(req, "mw1", "first");
   next(req, res);
 }
 
-void middleware_second_ctx(Req *req, Res *res, Next next) {
+void middleware_second_ctx(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   ecewo_set_context(req, "mw2", "second");
   next(req, res);
 }
 
-void handler_chain_context(Req *req, Res *res) {
+void handler_chain_context(ecewo_request_t *req, ecewo_response_t *res) {
   const char *v1 = ecewo_get_context(req, "mw1");
   const char *v2 = ecewo_get_context(req, "mw2");
 
@@ -281,7 +281,7 @@ typedef struct
   bool is_admin;
 } complex_user_t;
 
-void handler_complex_data(Req *req, Res *res) {
+void handler_complex_data(ecewo_request_t *req, ecewo_response_t *res) {
   complex_user_t *user = ecewo_alloc(req->arena, sizeof(complex_user_t));
   user->id = 123;
   user->name = ecewo_strdup(req->arena, "John Doe");
@@ -338,7 +338,7 @@ int test_context_unauthorized(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/context", context_middleware, context_handler);
   ECEWO_GET(app, "/no-middleware", handler_no_middleware);
   ECEWO_GET(app, "/nonexistent-key", handler_nonexistent_key);

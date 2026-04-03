@@ -25,12 +25,12 @@
 
 #include <string.h>
 
-typedef struct ArenaRegion ArenaRegion;
+typedef struct arena_region_t arena_region_t;
 
-typedef struct Arena {
-  ArenaRegion *begin;
-  ArenaRegion *end;
-} Arena;
+typedef struct ecewo_arena_t {
+  arena_region_t *begin;
+  arena_region_t *end;
+} ecewo_arena_t;
 
 typedef struct {
   char *items;
@@ -38,15 +38,15 @@ typedef struct {
   size_t capacity;
 } StringBuilder;
 
-void *ecewo_alloc(Arena *arena, size_t size_bytes);
-void *ecewo_realloc(Arena *arena, void *oldptr, size_t oldsz, size_t newsz);
-char *ecewo_strdup(Arena *arena, const char *cstr);
-void *ecewo_memdup(Arena *arena, void *data, size_t size);
-char *ecewo_sprintf(Arena *arena, const char *format, ...);
-void ecewo_free(Arena *arena);
+void *ecewo_alloc(ecewo_arena_t *arena, size_t size_bytes);
+void *ecewo_realloc(ecewo_arena_t *arena, void *oldptr, size_t oldsz, size_t newsz);
+char *ecewo_strdup(ecewo_arena_t *arena, const char *cstr);
+void *ecewo_memdup(ecewo_arena_t *arena, void *data, size_t size);
+char *ecewo_sprintf(ecewo_arena_t *arena, const char *format, ...);
+void ecewo_free(ecewo_arena_t *arena);
 
-Arena *ecewo_arena_borrow(void);
-void ecewo_arena_return(Arena *arena);
+ecewo_arena_t *ecewo_arena_borrow(void);
+void ecewo_arena_return(ecewo_arena_t *arena);
 
 #ifdef ECEWO_DEBUG
 void ecewo_arena_pool_stats(void);

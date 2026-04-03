@@ -26,8 +26,8 @@
 #include "uv.h"
 
 typedef struct {
-  Req *req;
-  Next next;
+  ecewo_request_t *req;
+  ecewo_next_t next;
 } mw_ctx_t;
 
 typedef struct {
@@ -40,7 +40,7 @@ static void auth_work(void *context) {
   uv_sleep(100);
 }
 
-static void auth_done(Res *res, void *context) {
+static void auth_done(ecewo_response_t *res, void *context) {
   mw_ctx_t *ctx = context;
 
   user_ctx_t *user = ecewo_alloc(res->arena, sizeof(user_ctx_t));
@@ -52,7 +52,7 @@ static void auth_done(Res *res, void *context) {
   ctx->next(ctx->req, res);
 }
 
-void middleware_async_auth(Req *req, Res *res, Next next) {
+void middleware_async_auth(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   const char *token = ecewo_get_header(req, "Authorization");
 
   if (!token) {
@@ -67,7 +67,7 @@ void middleware_async_auth(Req *req, Res *res, Next next) {
   ecewo_spawn_http(res, ctx, auth_work, auth_done);
 }
 
-void handler_protected(Req *req, Res *res) {
+void handler_protected(ecewo_request_t *req, ecewo_response_t *res) {
   user_ctx_t *user = ecewo_get_context(req, "user");
 
   if (!user) {
@@ -119,7 +119,7 @@ int test_async_auth_no_token(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/mw-async", middleware_async_auth, handler_protected);
 }
 

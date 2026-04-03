@@ -39,9 +39,9 @@
 #endif
 
 typedef struct {
-  Req *req;
-  Res *res;
-  client_t *client;
+  ecewo_request_t *req;
+  ecewo_response_t *res;
+  ecewo__client_t *client;
   BodyDataCb on_data;
   BodyEndCb on_end;
   size_t max_size;
@@ -51,11 +51,11 @@ typedef struct {
   bool errored;
 } StreamCtx;
 
-static StreamCtx *get_ctx(Req *req) {
+static StreamCtx *get_ctx(ecewo_request_t *req) {
   return (StreamCtx *)ecewo_get_context(req, "_body_stream");
 }
 
-static StreamCtx *get_or_create_ctx(Req *req) {
+static StreamCtx *get_or_create_ctx(ecewo_request_t *req) {
   if (!req || !req->arena)
     return NULL;
 
@@ -71,8 +71,8 @@ static StreamCtx *get_or_create_ctx(Req *req) {
   ctx->req = req;
   ctx->max_size = BODY_MAX_SIZE;
 
-  if (req->client_socket)
-    ctx->client = (client_t *)req->client_socket->data;
+  if (req->ecewo__client_socket)
+    ctx->client = (ecewo__client_t *)req->ecewo__client_socket->data;
 
   ecewo_set_context(req, "_body_stream", ctx);
   return ctx;
@@ -101,7 +101,7 @@ static int stream_on_chunk(void *udata, const uint8_t *data, size_t len) {
   return BODY_CHUNK_CONTINUE;
 }
 
-void ecewo_body_stream(Req *req, Res *res, Next next) {
+void ecewo_body_stream(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   if (!req || !res || !next)
     return;
 
@@ -124,7 +124,7 @@ void ecewo_body_stream(Req *req, Res *res, Next next) {
   next(req, res);
 }
 
-void ecewo_body_on_data(Req *req, BodyDataCb callback) {
+void ecewo_body_on_data(ecewo_request_t *req, BodyDataCb callback) {
   if (!req || !callback)
     return;
 
@@ -140,7 +140,7 @@ void ecewo_body_on_data(Req *req, BodyDataCb callback) {
   ctx->on_data = callback;
 }
 
-void ecewo_body_on_end(Req *req, Res *res, BodyEndCb callback) {
+void ecewo_body_on_end(ecewo_request_t *req, ecewo_response_t *res, BodyEndCb callback) {
   if (!req || !res || !callback)
     return;
 
@@ -156,7 +156,7 @@ void ecewo_body_on_end(Req *req, Res *res, BodyEndCb callback) {
     callback(req, res);
 }
 
-size_t ecewo_body_limit(Req *req, size_t max_size) {
+size_t ecewo_body_limit(ecewo_request_t *req, size_t max_size) {
   if (!req)
     return 0;
 
@@ -170,7 +170,7 @@ size_t ecewo_body_limit(Req *req, size_t max_size) {
 }
 
 // Called by router.c after full message received in streaming mode
-void body_stream_complete(Req *req) {
+void body_stream_complete(ecewo_request_t *req) {
   if (!req)
     return;
 

@@ -40,7 +40,7 @@ static uint64_t get_thread_id(void) {
 // ============================================================================
 
 typedef struct {
-  Res *res;
+  ecewo_response_t *res;
   uint64_t main_thread_id;
   uint64_t work_thread_id;
   uint64_t done_thread_id;
@@ -68,7 +68,7 @@ static void thread_test_done(void *context) {
 // HANDLERS
 // ============================================================================
 
-void handler_thread_test(Req *req, Res *res) {
+void handler_thread_test(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   thread_test_ctx_t *ctx = ecewo_alloc(res->arena, sizeof(thread_test_ctx_t));
   ctx->res = res;
@@ -79,18 +79,18 @@ void handler_thread_test(Req *req, Res *res) {
   ecewo_spawn(ctx, thread_test_work, thread_test_done);
 }
 
-void handler_get_main_thread(Req *req, Res *res) {
+void handler_get_main_thread(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   char *response = ecewo_sprintf(res->arena, "%" PRIu64, get_thread_id());
   ecewo_send_text(res, 200, response);
 }
 
-void handler_fast(Req *req, Res *res) {
+void handler_fast(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, 200, "fast");
 }
 
-void handler_slow(Req *req, Res *res) {
+void handler_slow(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   uv_sleep(300);
   ecewo_send_text(res, 200, "slow");
@@ -228,7 +228,7 @@ int test_sync_blocking(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/thread-test", handler_thread_test);
   ECEWO_GET(app, "/main-thread", handler_get_main_thread);
   ECEWO_GET(app, "/fast", handler_fast);

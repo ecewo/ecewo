@@ -28,7 +28,7 @@
 
 // TEST 1: ecewo_alloc: basic allocation
 int test_arena_alloc_basic(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   void *p = ecewo_alloc(&a, 64);
   ASSERT_NOT_NULL(p);
@@ -47,7 +47,7 @@ int test_arena_alloc_basic(void) {
 
 // TEST 2: ecewo_alloc: multiple allocations do not overlap
 int test_arena_alloc_no_overlap(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   int *x = ecewo_alloc(&a, sizeof(int));
   int *y = ecewo_alloc(&a, sizeof(int));
@@ -67,7 +67,7 @@ int test_arena_alloc_no_overlap(void) {
 
 // TEST 3: ecewo_alloc: allocation larger than default region size forces a new region
 int test_arena_alloc_large(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   // 64 KiB is the default ARENA_REGION_SIZE
   size_t large = 64UL * 1024UL + 1;
@@ -83,7 +83,7 @@ int test_arena_alloc_large(void) {
 
 // TEST 4: ecewo_realloc: newsz <= oldsz returns the same pointer
 int test_arena_realloc_shrink(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   void *p = ecewo_alloc(&a, 128);
   ASSERT_NOT_NULL(p);
@@ -101,7 +101,7 @@ int test_arena_realloc_shrink(void) {
 
 // TEST 5: ecewo_realloc: grow copies existing data
 int test_arena_realloc_grow(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   char *p = ecewo_alloc(&a, 4);
   ASSERT_NOT_NULL(p);
@@ -118,7 +118,7 @@ int test_arena_realloc_grow(void) {
 
 // TEST 6: ecewo_strdup: NULL input returns NULL
 int test_arena_strdup_null(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   char *p = ecewo_strdup(&a, NULL);
   ASSERT_NULL(p);
@@ -130,7 +130,7 @@ int test_arena_strdup_null(void) {
 
 // TEST 7: ecewo_strdup: duplicates string correctly
 int test_arena_strdup_basic(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   const char *orig = "hello, world";
   char *dup = ecewo_strdup(&a, orig);
@@ -147,7 +147,7 @@ int test_arena_strdup_basic(void) {
 
 // TEST 8: ecewo_strdup: empty string
 int test_arena_strdup_empty(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   char *dup = ecewo_strdup(&a, "");
   ASSERT_NOT_NULL(dup);
@@ -160,7 +160,7 @@ int test_arena_strdup_empty(void) {
 
 // TEST 9: ecewo_memdup: NULL data or zero size returns NULL
 int test_arena_memdup_null(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   ASSERT_NULL(ecewo_memdup(&a, NULL, 8));
   ASSERT_NULL(ecewo_memdup(&a, "x", 0));
@@ -172,7 +172,7 @@ int test_arena_memdup_null(void) {
 
 // TEST 10: ecewo_memdup: duplicates binary data correctly
 int test_arena_memdup_basic(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   uint8_t src[4] = {0xDE, 0xAD, 0xBE, 0xEF};
   uint8_t *dst = ecewo_memdup(&a, src, sizeof(src));
@@ -187,7 +187,7 @@ int test_arena_memdup_basic(void) {
 
 // TEST 11: ecewo_sprintf: multi-argument format
 int test_arena_sprintf_multi(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   char *s = ecewo_sprintf(&a, "%s:%d", "port", 8080);
   ASSERT_NOT_NULL(s);
@@ -200,7 +200,7 @@ int test_arena_sprintf_multi(void) {
 
 // TEST 12: ecewo_free: zeroes begin and end pointers
 int test_arena_free(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
 
   void *p = ecewo_alloc(&a, 32);
   ASSERT_NOT_NULL(p);
@@ -222,7 +222,7 @@ typedef struct {
 } IntArray;
 
 int test_arena_da_append_growth(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
   IntArray arr = {0};
 
   // Fill past initial capacity (ARENA_DA_INIT_CAP = 256) to force a realloc
@@ -244,7 +244,7 @@ int test_arena_da_append_growth(void) {
 
 // TEST 14: ecewo_da_append_many: bulk append
 int test_arena_da_append_many(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
   IntArray arr = {0};
 
   int batch[] = {10, 20, 30, 40, 50};

@@ -28,7 +28,7 @@
 #include <strings.h>
 #endif
 
-static const char *get_req(const request_t *request, const char *key, bool case_insensitive) {
+static const char *get_req(const ecewo__req_t *request, const char *key, bool case_insensitive) {
   if (!request || !request->items || !key || request->count == 0)
     return NULL;
 
@@ -47,39 +47,39 @@ static const char *get_req(const request_t *request, const char *key, bool case_
   return NULL;
 }
 
-const char *ecewo_get_param(const Req *req, const char *key) {
+const char *ecewo_get_param(const ecewo_request_t *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(req->params, key, false);
 }
 
-const char *ecewo_get_query(const Req *req, const char *key) {
+const char *ecewo_get_query(const ecewo_request_t *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(req->query, key, false);
 }
 
-const char *ecewo_get_header(const Req *req, const char *key) {
+const char *ecewo_get_header(const ecewo_request_t *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(req->headers, key, true);
 }
 
-void ecewo_set_context(Req *req, const char *key, void *data) {
+void ecewo_set_context(ecewo_request_t *req, const char *key, void *data) {
   if (!req || !key)
     return;
 
   if (!req->ctx) {
-    req->ctx = ecewo_alloc(req->arena, sizeof(context_t));
+    req->ctx = ecewo_alloc(req->arena, sizeof(ecewo__req_ctx_t));
     if (!req->ctx)
       return;
-    memset(req->ctx, 0, sizeof(context_t));
+    memset(req->ctx, 0, sizeof(ecewo__req_ctx_t));
   }
 
-  context_t *ctx = req->ctx;
+  ecewo__req_ctx_t *ctx = req->ctx;
 
   for (uint32_t i = 0; i < ctx->count; i++) {
     if (ctx->entries[i].key && strcmp(ctx->entries[i].key, key) == 0) {
@@ -116,11 +116,11 @@ void ecewo_set_context(Req *req, const char *key, void *data) {
   ctx->count++;
 }
 
-void *ecewo_get_context(Req *req, const char *key) {
+void *ecewo_get_context(ecewo_request_t *req, const char *key) {
   if (!req || !req->ctx || !key)
     return NULL;
 
-  context_t *ctx = req->ctx;
+  ecewo__req_ctx_t *ctx = req->ctx;
 
   for (uint32_t i = 0; i < ctx->count; i++) {
     if (ctx->entries[i].key && strcmp(ctx->entries[i].key, key) == 0)

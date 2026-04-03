@@ -26,28 +26,28 @@
 
 static int middleware_order_tracker = 0;
 
-void middleware_first(Req *req, Res *res, Next next) {
+void middleware_first(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   int *order = ecewo_alloc(req->arena, sizeof(int));
   *order = ++middleware_order_tracker;
   ecewo_set_context(req, "first", order);
   next(req, res);
 }
 
-void middleware_second(Req *req, Res *res, Next next) {
+void middleware_second(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   int *order = ecewo_alloc(req->arena, sizeof(int));
   *order = ++middleware_order_tracker;
   ecewo_set_context(req, "second", order);
   next(req, res);
 }
 
-void middleware_third(Req *req, Res *res, Next next) {
+void middleware_third(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   int *order = ecewo_alloc(req->arena, sizeof(int));
   *order = ++middleware_order_tracker;
   ecewo_set_context(req, "third", order);
   next(req, res);
 }
 
-void handler_middleware_order(Req *req, Res *res) {
+void handler_middleware_order(ecewo_request_t *req, ecewo_response_t *res) {
   int *first = ecewo_get_context(req, "first");
   int *second = ecewo_get_context(req, "second");
   int *third = ecewo_get_context(req, "third");
@@ -60,14 +60,14 @@ void handler_middleware_order(Req *req, Res *res) {
   ecewo_send_text(res, 200, response);
 }
 
-void middleware_abort(Req *req, Res *res, Next next) {
+void middleware_abort(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   (void)req;
   (void)next;
   ecewo_send_text(res, 403, "Forbidden by middleware");
   return; // Don't call next
 }
 
-void handler_should_not_reach(Req *req, Res *res) {
+void handler_should_not_reach(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, 200, "Should not see this");
 }
@@ -104,7 +104,7 @@ int test_middleware_abort(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/mw-order", middleware_first, middleware_second, middleware_third, handler_middleware_order);
   ECEWO_GET(app, "/mw-abort", middleware_abort, handler_should_not_reach);
 }

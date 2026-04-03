@@ -24,7 +24,7 @@
 #include "ecewo-mock.h"
 #include "tester.h"
 
-void handler(Req *req, Res *res) {
+void handler(ecewo_request_t *req, ecewo_response_t *res) {
   ecewo_send_text(res, OK, req->path);
 }
 
@@ -116,7 +116,7 @@ static int wildcard_test(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/", handler);
   ECEWO_GET(app, "/users/:id", handler);
   ECEWO_GET(app, "/files/*", handler);

@@ -24,7 +24,7 @@
 #include "ecewo-mock.h"
 #include "tester.h"
 
-void handler_root(Req *req, Res *res) {
+void handler_root(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, 200, "root");
 }
@@ -44,7 +44,7 @@ int test_root_path(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/", handler_root);
 }
 

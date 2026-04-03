@@ -33,12 +33,12 @@
 #include "ecewo.h"
 #include <stdio.h>
 
-void hello_world(Req *req, Res *res) {
+void hello_world(ecewo_request_t *req, ecewo_response_t *res) {
   ecewo_send_text(res, OK, "Hello, World!");
 }
 
 int main(void) {
-  App *app = ecewo_create();
+  ecewo_app_t *app = ecewo_create();
   if (!app) {
     fprintf(stderr, "Failed to initialize server\n");
     return -1;

@@ -24,7 +24,7 @@
 #include "ecewo-mock.h"
 #include "tester.h"
 
-void handler_body(Req *req, Res *res) {
+void handler_body(ecewo_request_t *req, ecewo_response_t *res) {
   char *response = ecewo_sprintf(req->arena, "received=%zu", req->body_len);
   ecewo_send_text(res, 200, response);
 }
@@ -72,7 +72,7 @@ int test_normal_body(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_POST(app, "/large-body", handler_body);
   ECEWO_POST(app, "/normal-body", handler_body);
 }

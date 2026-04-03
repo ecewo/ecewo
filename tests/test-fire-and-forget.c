@@ -28,7 +28,7 @@
 static int background_counter = 0;
 
 typedef struct {
-  Arena *arena;
+  ecewo_arena_t *arena;
   int increment;
 } background_ctx_t;
 
@@ -38,9 +38,9 @@ static void background_work(void *context) {
   ecewo_arena_return(ctx->arena);
 }
 
-void handler_fire_and_forget(Req *req, Res *res) {
+void handler_fire_and_forget(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
-  Arena *bg_arena = ecewo_arena_borrow();
+  ecewo_arena_t *bg_arena = ecewo_arena_borrow();
 
   background_ctx_t *ctx = ecewo_alloc(bg_arena, sizeof(background_ctx_t));
   ctx->arena = bg_arena;
@@ -50,7 +50,7 @@ void handler_fire_and_forget(Req *req, Res *res) {
   ecewo_send_text(res, ACCEPTED, "Status: Accepted");
 }
 
-void handler_check_counter(Req *req, Res *res) {
+void handler_check_counter(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   char *response = ecewo_sprintf(req->arena, "Counter: %d", background_counter);
   ecewo_send_text(res, 200, response);
@@ -84,7 +84,7 @@ int test_spawn_fire_and_forget(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_POST(app, "/background", handler_fire_and_forget);
   ECEWO_GET(app, "/check-counter", handler_check_counter);
 }

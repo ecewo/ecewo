@@ -19,7 +19,7 @@ Let's write our `hello world` example again, but this time it will send a JSON o
 #include "cJSON.h"
 #include <stdio.h>
 
-void hello_world(Req *req, Res *res) {
+void hello_world(ecewo_request_t *req, ecewo_response_t *res) {
     // Create a JSON object
     cJSON *json = cJSON_CreateObject();
 
@@ -38,7 +38,7 @@ void hello_world(Req *req, Res *res) {
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;
@@ -68,7 +68,7 @@ This time, let's take a JSON and print it to console.
 #include "cJSON.h"
 #include <stdio.h>
 
-void handle_user(Req *req, Res *res) {
+void handle_user(ecewo_request_t *req, ecewo_response_t *res) {
     const char *body = req->body;
 
     if (body == NULL) {
@@ -102,7 +102,7 @@ void handle_user(Req *req, Res *res) {
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     if (!app) {
         fprintf(stderr, "Failed to initialize server\n");
         return 1;

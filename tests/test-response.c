@@ -25,7 +25,7 @@
 #include "tester.h"
 
 // JSON
-void handler_json_response(Req *req, Res *res) {
+void handler_json_response(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_json(res, 200, "{\"status\":\"ok\"}");
 }
@@ -46,7 +46,7 @@ int test_json_content_type(void) {
 }
 
 // HTML
-void handler_html_response(Req *req, Res *res) {
+void handler_html_response(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_html(res, 200, "<h1>Hello</h1>");
 }
@@ -67,7 +67,7 @@ int test_html_content_type(void) {
 }
 
 // STATUS CODES
-void handler_status_codes(Req *req, Res *res) {
+void handler_status_codes(ecewo_request_t *req, ecewo_response_t *res) {
   const char *code = ecewo_get_query(req, "code");
   if (!code) {
     ecewo_send_text(res, 400, "Missing code");
@@ -144,7 +144,7 @@ int test_404_wrong_method(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/json-response", handler_json_response);
   ECEWO_GET(app, "/html-response", handler_html_response);
   ECEWO_GET(app, "/status", handler_status_codes);

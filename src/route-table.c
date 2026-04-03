@@ -96,12 +96,12 @@ typedef struct route_node {
   rax *children;
   struct route_node *param_child;
 
-  RequestHandler handlers[METHOD_COUNT];
+  ecewo__handler_t handlers[METHOD_COUNT];
   void *middleware_ctx[METHOD_COUNT];
   char **route_param_names[METHOD_COUNT];
   uint8_t route_param_count[METHOD_COUNT];
 
-  RequestHandler wildcard_handlers[METHOD_COUNT];
+  ecewo__handler_t wildcard_handlers[METHOD_COUNT];
   void *wildcard_middleware_ctx[METHOD_COUNT];
   char **wildcard_param_names[METHOD_COUNT];
   uint8_t wildcard_param_count[METHOD_COUNT];
@@ -117,7 +117,7 @@ struct route_table {
 // -------------------------------------------------------------------------
 
 // Called by router.c before route_table_match
-int tokenize_path(Arena *arena, const char *path, size_t path_len, tokenized_path_t *result) {
+int tokenize_path(ecewo_arena_t *arena, const char *path, size_t path_len, tokenized_path_t *result) {
   if (!path || !result)
     return -1;
 
@@ -244,7 +244,7 @@ static int tokenize_pattern(const char *path,
 // -------------------------------------------------------------------------
 
 static int add_param_to_match(route_match_t *match,
-                              Arena *arena,
+                              ecewo_arena_t *arena,
                               const char *key_data,
                               size_t key_len,
                               const char *value_data,
@@ -364,7 +364,7 @@ static bool match_node(route_node_t *node,
                        uint8_t seg_idx,
                        int method_idx,
                        route_match_t *match,
-                       Arena *arena,
+                       ecewo_arena_t *arena,
                        bool allow_wildcards,
                        route_node_t **leaf_out) {
   // All segments consumed
@@ -495,7 +495,7 @@ route_table_t *route_table_create(void) {
 int route_table_add(route_table_t *table,
                     llhttp_method_t method,
                     const char *path,
-                    RequestHandler handler,
+                    ecewo__handler_t handler,
                     void *middleware_ctx) {
   if (!table || !path || !handler)
     return -1;
@@ -656,7 +656,7 @@ bool route_table_match(route_table_t *table,
                        llhttp_t *parser,
                        const tokenized_path_t *tokenized_path,
                        route_match_t *match,
-                       Arena *arena) {
+                       ecewo_arena_t *arena) {
   if (!table || !parser || !tokenized_path || !match)
     return false;
 

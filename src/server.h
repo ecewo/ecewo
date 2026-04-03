@@ -34,8 +34,8 @@
 #define READ_BUFFER_SIZE 16384
 #endif
 
-struct server_s {
-  App *app;
+struct ecewo__server_s {
+  ecewo_app_t *app;
   bool initialized;
   bool running;
   bool shutdown_requested;
@@ -49,7 +49,7 @@ struct server_s {
   uv_async_t shutdown_async;
   uv_async_t async_work_handle; // unreffed while idle, reffed while async_work_count > 0
   shutdown_callback_t shutdown_callback;
-  client_t *client_list_head;
+  ecewo__client_t *client_list_head;
   uv_timer_t *cleanup_timer;
   uv_timer_t *force_close_timer;
   route_table_t *route_table;
@@ -58,7 +58,7 @@ struct server_s {
   uint16_t global_middleware_capacity;
 };
 
-struct client_s {
+struct ecewo__client_s {
   uv_tcp_t handle;
   uv_buf_t read_buf;
   char buffer[READ_BUFFER_SIZE];
@@ -66,9 +66,9 @@ struct client_s {
   bool draining; // True while draining receive buffer before closing
   uint64_t last_activity;
   bool keep_alive_enabled;
-  struct client_s *next;
+  struct ecewo__client_s *next;
 
-  Arena *connection_arena; // Lives for the duration of the connection
+  ecewo_arena_t *connection_arena; // Lives for the duration of the connection
 
   // Connection-scoped parser and context
   llhttp_t persistent_parser;
@@ -84,22 +84,22 @@ struct client_s {
   atomic_int refcount;
   bool valid;
 
-  RequestHandler pending_handler;
+  ecewo__handler_t pending_handler;
   void *pending_mw;
   bool handler_pending;
-  Req *pending_req;
-  Res *pending_res;
+  ecewo_request_t *pending_req;
+  ecewo_response_t *pending_res;
 
   // Saved req/res for streaming requests whose body spans multiple TCP reads.
   // Set on the first TCP read (headers complete, body not yet fully arrived)
   // when body_stream middleware is detected; consumed on a later TCP read
   // (body finally complete) to call body_stream_complete on the original req
   // instead of dispatching a fresh one.
-  Req *stream_req;
-  Res *stream_res;
+  ecewo_request_t *stream_req;
+  ecewo_response_t *stream_res;
 
   // Pointer back to the server that owns this client
-  server_t *srv;
+  ecewo__server_t *srv;
 };
 
 void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);

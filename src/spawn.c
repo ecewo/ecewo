@@ -111,8 +111,8 @@ typedef struct {
   void *context;
   spawn_handler_t work_fn;
   spawn_done_t done_fn;
-  Res *res;
-  client_t *client;
+  ecewo_response_t *res;
+  ecewo__client_t *client;
 } spawn_http_t;
 
 static void spawn_http_cleanup_cb(uv_handle_t *handle) {
@@ -131,8 +131,8 @@ static void spawn_http_async_cb(uv_async_t *handle) {
   if (!t)
     return;
 
-  Res *res = t->res;
-  client_t *client = t->client;
+  ecewo_response_t *res = t->res;
+  ecewo__client_t *client = t->client;
 
   if (!client) {
     uv_close((uv_handle_t *)handle, spawn_http_cleanup_cb);
@@ -172,12 +172,12 @@ static void spawn_http_after_work_cb(uv_work_t *req, int status) {
   uv_async_send(&t->async_send);
 }
 
-int ecewo_spawn_http(Res *res, void *context, spawn_handler_t work_fn, spawn_done_t done_fn) {
+int ecewo_spawn_http(ecewo_response_t *res, void *context, spawn_handler_t work_fn, spawn_done_t done_fn) {
 
   if (!res || !work_fn)
     return -1;
 
-  if (!res->client_socket || !res->client_socket->data)
+  if (!res->ecewo__client_socket || !res->ecewo__client_socket->data)
     return -1;
 
   spawn_http_t *task = calloc(1, sizeof(spawn_http_t));
@@ -197,8 +197,8 @@ int ecewo_spawn_http(Res *res, void *context, spawn_handler_t work_fn, spawn_don
 
   task->res = res;
   task->client = NULL;
-  if (res && res->client_socket && res->client_socket->data) {
-    task->client = (client_t *)res->client_socket->data;
+  if (res && res->ecewo__client_socket && res->ecewo__client_socket->data) {
+    task->client = (ecewo__client_t *)res->ecewo__client_socket->data;
     ecewo_client_ref(task->client);
   }
 

@@ -24,12 +24,12 @@
 #include "ecewo-mock.h"
 #include "tester.h"
 
-void handler_redirect(Req *req, Res *res) {
+void handler_redirect(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_redirect(res, MOVED_PERMANENTLY, "/new-location");
 }
 
-void handler_new_location(Req *req, Res *res) {
+void handler_new_location(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, OK, "New page content");
 }
@@ -63,7 +63,7 @@ int test_redirect(void) {
   RETURN_OK();
 }
 
-void handler_redirect_injection(Req *req, Res *res) {
+void handler_redirect_injection(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
 
   const char *evil_url = "https://motherfuckingmaliciouswebsite.com\r\nSet-Cookie: session=stolen";
@@ -88,7 +88,7 @@ int test_redirect_injection(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/old-path", handler_redirect);
   ECEWO_GET(app, "/new-location", handler_new_location);
   ECEWO_GET(app, "/ecewo_redirect-injection", handler_redirect_injection);

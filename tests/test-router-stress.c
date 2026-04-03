@@ -48,23 +48,23 @@
 // Handlers return distinguishable status codes 
 // so we can verify which route was matched without parsing the body.
 
-static void specific_handler(Req *req, Res *res) {
+static void specific_handler(ecewo_request_t *req, ecewo_response_t *res) {
   // Echo the captured :id value so the test can also verify param extraction
   const char *id = ecewo_get_param(req, "id");
   ecewo_send_text(res, 200, id ? id : "no-id");
 }
 
-static void generic_handler(Req *req, Res *res) {
+static void generic_handler(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, 201, "generic");
 }
 
-static void static_handler(Req *req, Res *res) {
+static void static_handler(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_send_text(res, 202, "static");
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   // 10 specific same-depth routes registered FIRST
   ECEWO_GET(app, "/a/:id", specific_handler);
   ECEWO_GET(app, "/b/:id", specific_handler);

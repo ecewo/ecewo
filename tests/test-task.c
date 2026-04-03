@@ -25,7 +25,7 @@
 #include "tester.h"
 
 typedef struct {
-  Res *res;
+  ecewo_response_t *res;
   int result;
 } compute_ctx_t;
 
@@ -41,7 +41,7 @@ static void compute_done(void *context) {
   ecewo_send_text(ctx->res, 200, response);
 }
 
-void handler_compute(Req *req, Res *res) {
+void handler_compute(ecewo_request_t *req, ecewo_response_t *res) {
   compute_ctx_t *ctx = ecewo_alloc(req->arena, sizeof(compute_ctx_t));
   ctx->res = res;
   ctx->result = 0;
@@ -65,7 +65,7 @@ int test_spawn_with_response(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/compute", handler_compute);
 }
 

@@ -40,7 +40,7 @@
 #include "ecewo.h"
 #include "route-table.h"
 
-static void noop(Req *req, Res *res) {
+static void noop(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   (void)res;
 }

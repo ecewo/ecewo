@@ -49,7 +49,7 @@ typedef enum {
 typedef int (*body_chunk_cb_t)(void *udata, const uint8_t *chunk, size_t len);
 
 typedef struct {
-  Arena *arena;
+  ecewo_arena_t *arena;
   llhttp_t *parser;
   llhttp_settings_t *settings;
 
@@ -64,9 +64,9 @@ typedef struct {
   size_t method_capacity;
 
   // Headers
-  request_t headers;
-  request_t query_params;
-  request_t url_params;
+  ecewo__req_t headers;
+  ecewo__req_t query_params;
+  ecewo__req_t url_params;
 
   // Body (buffered)
   uint8_t *body;
@@ -103,7 +103,7 @@ parse_result_t http_finish_parsing(http_context_t *context);
 
 // Used in server.c
 void http_context_init(http_context_t *context,
-                       Arena *arena,
+                       ecewo_arena_t *arena,
                        llhttp_t *parser,
                        llhttp_settings_t *settings);
 
@@ -115,7 +115,7 @@ int on_body_cb(llhttp_t *parser, const char *at, size_t length);
 int on_headers_complete_cb(llhttp_t *parser);
 int on_message_complete_cb(llhttp_t *parser);
 
-int ensure_array_capacity(Arena *arena, request_t *array);
+int ensure_array_capacity(ecewo_arena_t *arena, ecewo__req_t *array);
 
 // Utility function for debugging
 const char *parse_result_to_string(parse_result_t result);

@@ -31,6 +31,6 @@ typedef enum RouterResult {
   REQUEST_PENDING
 } RouterResult;
 
-int router(client_t *client, const char *request_data, size_t request_len);
+int router(ecewo__client_t *client, const char *request_data, size_t request_len);
 
 #endif

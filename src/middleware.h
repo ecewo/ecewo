@@ -30,17 +30,17 @@
 #endif
 
 typedef struct MiddlewareInfo {
-  MiddlewareHandler *middleware;
+  ecewo__middleware_t *middleware;
   uint16_t middleware_count;
-  RequestHandler handler;
+  ecewo__handler_t handler;
 } MiddlewareInfo;
 
 typedef struct {
   const char *path_prefix;
-  MiddlewareHandler handler;
+  ecewo__middleware_t handler;
 } GlobalMiddlewareEntry;
 
-void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, server_t *srv);
-void reset_middleware(server_t *srv);
+void chain_start(ecewo_request_t *req, ecewo_response_t *res, MiddlewareInfo *middleware_info, ecewo__server_t *srv);
+void reset_middleware(ecewo__server_t *srv);
 
 #endif

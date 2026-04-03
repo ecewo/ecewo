@@ -33,7 +33,7 @@ typedef struct {
 } StreamContext;
 
 
-void chunk_callback(Req *req, const uint8_t *data, size_t len) {
+void chunk_callback(ecewo_request_t *req, const uint8_t *data, size_t len) {
   StreamContext *ctx = ecewo_get_context(req, "stream_ctx");
   ctx->chunks_received++;
   ctx->total_bytes += len;
@@ -42,7 +42,7 @@ void chunk_callback(Req *req, const uint8_t *data, size_t len) {
     ctx->body_null_during_chunk = (req->body == NULL);
 }
 
-void end_callback(Req *req, Res *res) {
+void end_callback(ecewo_request_t *req, ecewo_response_t *res) {
   StreamContext *ctx = ecewo_get_context(req, "stream_ctx");
   char *response = ecewo_sprintf(req->arena,
     "chunks=%d,bytes=%zu,handler_null=%d,chunk_null=%d",
@@ -55,7 +55,7 @@ void end_callback(Req *req, Res *res) {
 }
 
 
-void handler_streaming_test(Req *req, Res *res) {
+void handler_streaming_test(ecewo_request_t *req, ecewo_response_t *res) {
   StreamContext *ctx = ecewo_alloc(req->arena, sizeof(StreamContext));
   memset(ctx, 0, sizeof(StreamContext));
 
@@ -86,7 +86,7 @@ int test_streaming_mode(void) {
 }
 
 
-void handler_buffered(Req *req, Res *res) {
+void handler_buffered(ecewo_request_t *req, ecewo_response_t *res) {
   char *response = ecewo_sprintf(req->arena, "len=%zu,body='%s'",
     req->body_len, req->body ? (const char *)req->body : "NULL");
   ecewo_send_text(res, OK, response);
@@ -110,7 +110,7 @@ int test_buffered_mode(void) {
 }
 
 
-void handler_size_limit(Req *req, Res *res) {
+void handler_size_limit(ecewo_request_t *req, ecewo_response_t *res) {
   ecewo_body_limit(req, 10);
   ecewo_body_on_data(req, chunk_callback);
   ecewo_body_on_end(req, res, end_callback);
@@ -132,7 +132,7 @@ int test_size_limit(void) {
 }
 
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_POST(app, "/streaming", ecewo_body_stream, handler_streaming_test);
   ECEWO_POST(app, "/buffered", handler_buffered);
   ECEWO_POST(app, "/size-limit", ecewo_body_stream, handler_size_limit);

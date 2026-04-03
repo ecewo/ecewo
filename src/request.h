@@ -25,18 +25,18 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct request_item_s {
+struct ecewo__req_item_s {
   const char *key;
   const char *value;
 };
 
-struct request_s {
-  struct request_item_s *items;
+struct ecewo__req_s {
+  struct ecewo__req_item_s *items;
   uint16_t count;
   uint16_t capacity;
 };
 
-struct http_header_s {
+struct ecewo__res_header_s {
   const char *name;
   const char *value;
 };
@@ -46,7 +46,7 @@ typedef struct {
   void *data;
 } context_entry_t;
 
-struct context_s {
+struct ecewo__req_ctx_s {
   context_entry_t *entries;
   uint32_t count;
   uint32_t capacity;

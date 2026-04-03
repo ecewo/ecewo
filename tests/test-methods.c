@@ -25,7 +25,7 @@
 #include "tester.h"
 #include <string.h>
 
-void handler_body(Req *req, Res *res) {
+void handler_body(ecewo_request_t *req, ecewo_response_t *res) {
   const char *body_str = req->body ? (const char *)req->body : "0";
 
   char *response = ecewo_sprintf(req->arena,
@@ -111,7 +111,7 @@ int test_method_patch(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/method", handler_body);
   ECEWO_POST(app, "/method", handler_body);
   ECEWO_PUT(app, "/method", handler_body);

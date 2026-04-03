@@ -24,7 +24,7 @@
 #include "ecewo-mock.h"
 #include "tester.h"
 
-void handler_echo_headers(Req *req, Res *res) {
+void handler_echo_headers(ecewo_request_t *req, ecewo_response_t *res) {
   const char *auth = ecewo_get_header(req, "Authorization");
   const char *content_type = ecewo_get_header(req, "Content-Type");
   const char *custom = ecewo_get_header(req, "X-Custom-Header");
@@ -60,7 +60,7 @@ int test_request_headers(void) {
   RETURN_OK();
 }
 
-void handler_set_headers(Req *req, Res *res) {
+void handler_set_headers(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
   ecewo_set_header(res, "X-Custom-Header", "test-value");
   ecewo_set_header(res, "X-Request-Id", "12345");
@@ -93,7 +93,7 @@ int test_set_headers(void) {
   RETURN_OK();
 }
 
-void handler_header_injection(Req *req, Res *res) {
+void handler_header_injection(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
 
   ecewo_set_header(res, "X-Evil", "value\r\nSet-Cookie: hacked=1");
@@ -120,7 +120,7 @@ int test_header_injection(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/headers", handler_echo_headers);
   ECEWO_GET(app, "/custom-headers", handler_set_headers);
   ECEWO_GET(app, "/header-injection", handler_header_injection);

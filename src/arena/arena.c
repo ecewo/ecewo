@@ -28,9 +28,9 @@
 #include <stdbool.h>
 #include "arena-internal.h"
 
-static inline ArenaRegion *new_region(size_t capacity) {
-  size_t size_bytes = sizeof(ArenaRegion) + sizeof(uintptr_t) * capacity;
-  ArenaRegion *r = (ArenaRegion *)malloc(size_bytes);
+static inline arena_region_t *new_region(size_t capacity) {
+  size_t size_bytes = sizeof(arena_region_t) + sizeof(uintptr_t) * capacity;
+  arena_region_t *r = (arena_region_t *)malloc(size_bytes);
 
   if (!r)
     return NULL;
@@ -41,12 +41,12 @@ static inline ArenaRegion *new_region(size_t capacity) {
   return r;
 }
 
-static inline void free_region(ArenaRegion *r) {
+static inline void free_region(arena_region_t *r) {
   free(r);
 }
 
-bool new_region_to(ArenaRegion **begin, ArenaRegion **end, size_t capacity) {
-  ArenaRegion *region = new_region(capacity);
+bool new_region_to(arena_region_t **begin, arena_region_t **end, size_t capacity) {
+  arena_region_t *region = new_region(capacity);
   if (!region) {
     *end = NULL;
     return false;
@@ -58,7 +58,7 @@ bool new_region_to(ArenaRegion **begin, ArenaRegion **end, size_t capacity) {
   return true;
 }
 
-void *ecewo_alloc(Arena *arena, size_t size_bytes) {
+void *ecewo_alloc(ecewo_arena_t *arena, size_t size_bytes) {
   size_t size = (size_bytes + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
 
   if (arena->end == NULL) {
@@ -92,7 +92,7 @@ void *ecewo_alloc(Arena *arena, size_t size_bytes) {
   return result;
 }
 
-void *ecewo_realloc(Arena *arena, void *oldptr, size_t oldsz, size_t newsz) {
+void *ecewo_realloc(ecewo_arena_t *arena, void *oldptr, size_t oldsz, size_t newsz) {
   if (newsz <= oldsz)
     return oldptr;
 
@@ -127,7 +127,7 @@ void *memcpy(void *dest, const void *src, size_t n) {
   return dest;
 }
 
-char *ecewo_strdup(Arena *arena, const char *cstr) {
+char *ecewo_strdup(ecewo_arena_t *arena, const char *cstr) {
   if (!cstr)
     return NULL;
 
@@ -142,7 +142,7 @@ char *ecewo_strdup(Arena *arena, const char *cstr) {
   return dup;
 }
 
-void *ecewo_memdup(Arena *arena, void *data, size_t size) {
+void *ecewo_memdup(ecewo_arena_t *arena, void *data, size_t size) {
   if (!data || size == 0)
     return NULL;
 
@@ -153,7 +153,7 @@ void *ecewo_memdup(Arena *arena, void *data, size_t size) {
   return memcpy(ptr, data, size);
 }
 
-char *ecewo_sprintf(Arena *arena, const char *format, ...) {
+char *ecewo_sprintf(ecewo_arena_t *arena, const char *format, ...) {
   va_list args, args_copy;
   va_start(args, format);
   va_copy(args_copy, args);
@@ -178,10 +178,10 @@ char *ecewo_sprintf(Arena *arena, const char *format, ...) {
   return result;
 }
 
-void ecewo_free(Arena *arena) {
-  ArenaRegion *r = arena->begin;
+void ecewo_free(ecewo_arena_t *arena) {
+  arena_region_t *r = arena->begin;
   while (r) {
-    ArenaRegion *r0 = r;
+    arena_region_t *r0 = r;
     r = r->next;
     free_region(r0);
   }
@@ -189,11 +189,11 @@ void ecewo_free(Arena *arena) {
   arena->end = NULL;
 }
 
-void arena_reset(Arena *a) {
+void arena_reset(ecewo_arena_t *a) {
   if (!a || !a->begin)
     return;
 
-  ArenaRegion *region = a->begin;
+  arena_region_t *region = a->begin;
   while (region) {
     region->count = 0;
     region = region->next;

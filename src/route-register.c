@@ -26,8 +26,8 @@
 #include "logger.h"
 
 #define ROUTE_REGISTER(func_name, method_enum)                              \
-  void func_name(App *app, const char *path, int mw_count, ...) {         \
-    if (!app || !app->internal || !app->arena) {                            \
+  void func_name(ecewo_app_t *app, const char *path, int mw_count, ...) {         \
+    if (!app || !app->server || !app->arena) {                            \
       LOG_ERROR("NULL app in route registration");                          \
       return;                                                               \
     }                                                                       \
@@ -40,9 +40,9 @@
     va_list args;                                                           \
     va_start(args, mw_count);                                               \
                                                                             \
-    MiddlewareHandler *mw = NULL;                                           \
+    ecewo__middleware_t *mw = NULL;                                           \
     if (mw_count > 0) {                                                     \
-      mw = ecewo_alloc(app->arena, sizeof(MiddlewareHandler) * mw_count);   \
+      mw = ecewo_alloc(app->arena, sizeof(ecewo__middleware_t) * mw_count);   \
       if (!mw) {                                                            \
         LOG_ERROR("Middleware allocation failed");                          \
         va_end(args);                                                       \
@@ -50,7 +50,7 @@
       }                                                                     \
                                                                             \
       for (int i = 0; i < mw_count; i++) {                                  \
-        mw[i] = va_arg(args, MiddlewareHandler);                            \
+        mw[i] = va_arg(args, ecewo__middleware_t);                            \
         if (!mw[i]) {                                                       \
           LOG_ERROR("NULL middleware handler at index %d", i);              \
           va_end(args);                                                     \
@@ -59,7 +59,7 @@
       }                                                                     \
     }                                                                       \
                                                                             \
-    RequestHandler handler = va_arg(args, RequestHandler);                  \
+    ecewo__handler_t handler = va_arg(args, ecewo__handler_t);                  \
     va_end(args);                                                           \
                                                                             \
     if (!handler) {                                                         \
@@ -76,7 +76,7 @@
     info->middleware_count = mw_count;                                      \
     info->middleware = mw;                                                  \
                                                                             \
-    int result = route_table_add(app->internal->route_table,                \
+    int result = route_table_add(app->server->route_table,                \
                                  method_enum, path, handler, info);         \
     if (result != 0)                                                        \
       LOG_ERROR("Failed to add route: %s", path);                           \

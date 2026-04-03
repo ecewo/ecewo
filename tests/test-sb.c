@@ -27,7 +27,7 @@
 
 // Null-only produces a single NUL byte
 int test_sb_null_only(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
   StringBuilder sb = {0};
 
   ecewo_sb_append_null(&a, &sb);
@@ -42,7 +42,7 @@ int test_sb_null_only(void) {
 
 // Single string append + null
 int test_sb_single_append(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
   StringBuilder sb = {0};
 
   ecewo_sb_append_cstr(&a, &sb, "hello");
@@ -58,7 +58,7 @@ int test_sb_single_append(void) {
 
 // Single char appended via ecewo_da_append
 int test_sb_single_char(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
   StringBuilder sb = {0};
 
   ecewo_da_append(&a, &sb, 'X');
@@ -75,7 +75,7 @@ int test_sb_single_char(void) {
 
 // Building a slash-joined path
 int test_sb_path_join(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
   StringBuilder sb = {0};
 
   const char *parts[] = {"api", "v1", "users"};
@@ -94,7 +94,7 @@ int test_sb_path_join(void) {
 
 // Many appends cross the ARENA_DA_INIT_CAP boundary
 int test_sb_large_growth(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
   StringBuilder sb = {0};
 
   // Each iteration appends "ab" (2 bytes). 200 iterations = 400 chars,
@@ -122,7 +122,7 @@ int test_sb_large_growth(void) {
 
 // Reuse after ecewo_free starts fresh
 int test_sb_reuse_after_free(void) {
-  Arena a = {0};
+  ecewo_arena_t a = {0};
   StringBuilder sb = {0};
 
   ecewo_sb_append_cstr(&a, &sb, "first");

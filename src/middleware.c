@@ -27,8 +27,8 @@
 #include "logger.h"
 
 typedef struct {
-  MiddlewareHandler *handlers;
-  RequestHandler route_handler;
+  ecewo__middleware_t *handlers;
+  ecewo__handler_t route_handler;
   uint16_t count;
   uint16_t current;
 } Chain;
@@ -46,7 +46,7 @@ static bool path_matches_prefix(const char *prefix, const char *req_path) {
   return next == '\0' || next == '/' || prefix[prefix_len - 1] == '/';
 }
 
-static void execute_next(Req *req, Res *res) {
+static void execute_next(ecewo_request_t *req, ecewo_response_t *res) {
   if (!req || !res) {
     LOG_ERROR("NULL request or response");
     return;
@@ -60,7 +60,7 @@ static void execute_next(Req *req, Res *res) {
   }
 
   if (chain->current < chain->count) {
-    MiddlewareHandler mw = chain->handlers[chain->current++];
+    ecewo__middleware_t mw = chain->handlers[chain->current++];
     mw(req, res, execute_next);
   } else {
     if (chain->route_handler)
@@ -68,7 +68,7 @@ static void execute_next(Req *req, Res *res) {
   }
 }
 
-void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, server_t *srv) {
+void chain_start(ecewo_request_t *req, ecewo_response_t *res, MiddlewareInfo *middleware_info, ecewo__server_t *srv) {
   if (!req || !res || !middleware_info || !middleware_info->handler)
     return;
 
@@ -88,7 +88,7 @@ void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, server_t *
     return;
   }
 
-  MiddlewareHandler *combined_handlers = ecewo_alloc(req->arena, sizeof(MiddlewareHandler) * total_middleware_count);
+  ecewo__middleware_t *combined_handlers = ecewo_alloc(req->arena, sizeof(ecewo__middleware_t) * total_middleware_count);
 
   if (!combined_handlers) {
     LOG_ERROR("Arena allocation failed for middleware handlers.");
@@ -108,7 +108,7 @@ void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, server_t *
   if (middleware_info->middleware_count > 0 && middleware_info->middleware) {
     memcpy(combined_handlers + idx,
            middleware_info->middleware,
-           sizeof(MiddlewareHandler) * middleware_info->middleware_count);
+           sizeof(ecewo__middleware_t) * middleware_info->middleware_count);
   }
 
   Chain *chain = ecewo_alloc(req->arena, sizeof(Chain));
@@ -128,18 +128,18 @@ void chain_start(Req *req, Res *res, MiddlewareInfo *middleware_info, server_t *
   execute_next(req, res);
 }
 
-void ecewo__register_use(App *app, const char *path, MiddlewareHandler middleware_handler) {
+void ecewo__register_use(ecewo_app_t *app, const char *path, ecewo__middleware_t middleware_handler) {
   if (!middleware_handler) {
     LOG_ERROR("NULL middleware handler");
     abort();
   }
 
-  if (!app || !app->internal) {
+  if (!app || !app->server) {
     LOG_ERROR("NULL app in ecewo__register_use");
     abort();
   }
 
-  server_t *srv = app->internal;
+  ecewo__server_t *srv = app->server;
 
   if (srv->global_middleware_count >= srv->global_middleware_capacity) {
     int new_cap = srv->global_middleware_capacity
@@ -159,7 +159,7 @@ void ecewo__register_use(App *app, const char *path, MiddlewareHandler middlewar
   srv->global_middleware_count++;
 }
 
-void reset_middleware(server_t *srv) {
+void reset_middleware(ecewo__server_t *srv) {
   if (!srv)
     return;
 

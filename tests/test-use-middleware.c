@@ -24,17 +24,17 @@
 #include "ecewo-mock.h"
 #include "tester.h"
 
-static void global_tag_mw(Req *req, Res *res, Next next) {
+static void global_tag_mw(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   ecewo_set_context(req, "global", "yes");
   next(req, res);
 }
 
-static void api_tag_mw(Req *req, Res *res, Next next) {
+static void api_tag_mw(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   ecewo_set_context(req, "api", "yes");
   next(req, res);
 }
 
-static void tag_handler(Req *req, Res *res) {
+static void tag_handler(ecewo_request_t *req, ecewo_response_t *res) {
   const char *global_tag = ecewo_get_context(req, "global");
   const char *api_tag = ecewo_get_context(req, "api");
 
@@ -88,7 +88,7 @@ int test_path_use_skipped_for_nonmatching(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_USE(app, global_tag_mw);
   ECEWO_USE(app, "/use-api", api_tag_mw);
 

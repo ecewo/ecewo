@@ -54,7 +54,7 @@ typedef struct {
 } param_match_t;
 
 typedef struct {
-  RequestHandler handler;
+  ecewo__handler_t handler;
   void *middleware_ctx;
   param_match_t inline_params[MAX_INLINE_PARAMS];
   param_match_t *params;
@@ -66,7 +66,7 @@ bool route_table_match(route_table_t *table,
                        llhttp_t *parser,
                        const tokenized_path_t *tokenized_path,
                        route_match_t *match,
-                       Arena *arena);
+                       ecewo_arena_t *arena);
 
 uint8_t route_table_allowed_methods(route_table_t *table,
                                     const tokenized_path_t *path);
@@ -74,10 +74,10 @@ uint8_t route_table_allowed_methods(route_table_t *table,
 int route_table_add(route_table_t *table,
                     llhttp_method_t method,
                     const char *path,
-                    RequestHandler handler,
+                    ecewo__handler_t handler,
                     void *middleware_ctx);
 
-int tokenize_path(Arena *arena, const char *path, size_t path_len, tokenized_path_t *result);
+int tokenize_path(ecewo_arena_t *arena, const char *path, size_t path_len, tokenized_path_t *result);
 void route_table_free(route_table_t *table);
 route_table_t *route_table_create(void);
 

@@ -25,7 +25,7 @@
 #include "tester.h"
 
 typedef struct {
-  Res *res;
+  ecewo_response_t *res;
   int total;
   int completed;
   int results[3];
@@ -64,7 +64,7 @@ static void parallel_done(void *context) {
   }
 }
 
-void handler_parallel(Req *req, Res *res) {
+void handler_parallel(ecewo_request_t *req, ecewo_response_t *res) {
   parallel_ctx_t *ctx = ecewo_alloc(req->arena, sizeof(parallel_ctx_t));
   ctx->res = res;
   ctx->total = 3;
@@ -94,7 +94,7 @@ int test_spawn_parallel(void) {
   RETURN_OK();
 }
 
-static void setup_routes(App *app) {
+static void setup_routes(ecewo_app_t *app) {
   ECEWO_GET(app, "/parallel", handler_parallel);
 }
 

@@ -18,7 +18,7 @@ const char *STATIC_USERNAME = "johndoe";
 const char *STATIC_PASSWORD = "123123";
 const char *STATIC_USER_ID = "1";
 
-void handle_login(Req *req, Res *res) {
+void handle_login(ecewo_request_t *req, ecewo_response_t *res) {
    const char *body = req->body;
    if (!body)
    {
@@ -86,7 +86,7 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     session_init();
 
     ECEWO_POST(app, "/login", handle_login);
@@ -117,7 +117,7 @@ If login is successful, we'll see a `Login successful!` response and a header li
 
 // Add this handler:
 
-void handle_logout(Req *req, Res *res) {
+void handle_logout(ecewo_request_t *req, ecewo_response_t *res) {
     // First, check if the user has session
     Session *session = session_get(req);
 
@@ -145,7 +145,7 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     session_init();
 
     ECEWO_POST(app, "/login", handle_login);
@@ -184,7 +184,7 @@ We added 3 data to the session in the Login handler: name, username and theme. L
 // [handle_login and handle_logout is here]
 // ...
 
-void handle_session_data(Req *req, Res *res) {
+void handle_session_data(ecewo_request_t *req, ecewo_response_t *res) {
    Session *session = session_get(req);
 
    if (!session)
@@ -230,7 +230,7 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     session_init();
 
     ECEWO_GET(app, "/session", handle_session_data); // We added it now
@@ -263,7 +263,7 @@ Let's say that we want some pages to be available for authenticated users only. 
 ```c
 // <-- Here are the other handlers -->
 
-void handle_protected_route(Req *req, Res *res) {
+void handle_protected_route(ecewo_request_t *req, ecewo_response_t *res) {
    // Get session from request
    Session *sess = session_get(req);
    if (!sess)
@@ -294,7 +294,7 @@ void cleanup_app(void) {
 }
 
 int main(void) {
-    App *app = ecewo_create();
+    ecewo_app_t *app = ecewo_create();
     session_init();
 
     ECEWO_GET(app, "/protected", handle_protected_route); // We added it now
