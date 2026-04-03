@@ -29,28 +29,28 @@ static int middleware_order_tracker = 0;
 void middleware_first(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   int *order = ecewo_alloc(req->arena, sizeof(int));
   *order = ++middleware_order_tracker;
-  ecewo_set_context(req, "first", order);
+  ecewo_context_set(req, "first", order);
   next(req, res);
 }
 
 void middleware_second(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   int *order = ecewo_alloc(req->arena, sizeof(int));
   *order = ++middleware_order_tracker;
-  ecewo_set_context(req, "second", order);
+  ecewo_context_set(req, "second", order);
   next(req, res);
 }
 
 void middleware_third(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
   int *order = ecewo_alloc(req->arena, sizeof(int));
   *order = ++middleware_order_tracker;
-  ecewo_set_context(req, "third", order);
+  ecewo_context_set(req, "third", order);
   next(req, res);
 }
 
 void handler_middleware_order(ecewo_request_t *req, ecewo_response_t *res) {
-  int *first = ecewo_get_context(req, "first");
-  int *second = ecewo_get_context(req, "second");
-  int *third = ecewo_get_context(req, "third");
+  int *first = ecewo_context_get(req, "first");
+  int *second = ecewo_context_get(req, "second");
+  int *third = ecewo_context_get(req, "third");
 
   char *response = ecewo_sprintf(req->arena, "%d,%d,%d",
                                  first ? *first : 0,

@@ -171,8 +171,8 @@ static int dispatch(ecewo__server_t *srv,
     *res_out = res;
 
   if (!srv || !srv->route_table || !ctx->method) {
-    ecewo_set_header(res, "Content-Type", "text/plain");
-    ecewo_reply(res, 404, "404 Not Found", 13);
+    ecewo_header_set(res, "Content-Type", "text/plain");
+    ecewo_send(res, 404, "404 Not Found", 13);
     return 0;
   }
 
@@ -211,12 +211,12 @@ static int dispatch(ecewo__server_t *srv,
         }
       }
       allow_buf[pos] = '\0';
-      ecewo_set_header(res, "Allow", allow_buf);
-      ecewo_set_header(res, "Content-Type", "text/plain");
-      ecewo_reply(res, 405, "405 Method Not Allowed", 22);
+      ecewo_header_set(res, "Allow", allow_buf);
+      ecewo_header_set(res, "Content-Type", "text/plain");
+      ecewo_send(res, 405, "405 Method Not Allowed", 22);
     } else {
-      ecewo_set_header(res, "Content-Type", "text/plain");
-      ecewo_reply(res, 404, "404 Not Found", 13);
+      ecewo_header_set(res, "Content-Type", "text/plain");
+      ecewo_send(res, 404, "404 Not Found", 13);
     }
     return 0;
   }
@@ -284,9 +284,9 @@ static int dispatch(ecewo__server_t *srv,
   }
 
   if (!ctx->on_body_chunk && has_body && (content_length >= (long)BUFFERED_BODY_MAX_SIZE || is_chunked)) {
-    ecewo_set_header(res, "Content-Type", "text/plain");
+    ecewo_header_set(res, "Content-Type", "text/plain");
     res->keep_alive = false;
-    ecewo_reply(res, 413, "Payload Too Large", 17);
+    ecewo_send(res, 413, "Payload Too Large", 17);
     return 0;
   }
 

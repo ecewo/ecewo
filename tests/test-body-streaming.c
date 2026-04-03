@@ -34,7 +34,7 @@ typedef struct {
 
 
 void chunk_callback(ecewo_request_t *req, const uint8_t *data, size_t len) {
-  StreamContext *ctx = ecewo_get_context(req, "stream_ctx");
+  StreamContext *ctx = ecewo_context_get(req, "stream_ctx");
   ctx->chunks_received++;
   ctx->total_bytes += len;
 
@@ -43,7 +43,7 @@ void chunk_callback(ecewo_request_t *req, const uint8_t *data, size_t len) {
 }
 
 void end_callback(ecewo_request_t *req, ecewo_response_t *res) {
-  StreamContext *ctx = ecewo_get_context(req, "stream_ctx");
+  StreamContext *ctx = ecewo_context_get(req, "stream_ctx");
   char *response = ecewo_sprintf(req->arena,
     "chunks=%d,bytes=%zu,handler_null=%d,chunk_null=%d",
     ctx->chunks_received,
@@ -61,7 +61,7 @@ void handler_streaming_test(ecewo_request_t *req, ecewo_response_t *res) {
 
   ctx->body_null_in_handler = (req->body == NULL);
 
-  ecewo_set_context(req, "stream_ctx", ctx);
+  ecewo_context_set(req, "stream_ctx", ctx);
   ecewo_body_on_data(req, chunk_callback);
   ecewo_body_on_end(req, res, end_callback);
 }

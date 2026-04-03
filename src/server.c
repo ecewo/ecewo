@@ -143,7 +143,7 @@ static void on_drain_shutdown(uv_shutdown_t *req, int status) {
     uv_read_start((uv_stream_t *)&client->handle, server_alloc_buffer, server_on_read);
   }
 
-  ecewo_client_unref(client); // release the drain reference
+  ecewo_client_unref(client); // drain reference
 }
 
 static void close_client(ecewo__client_t *client) {
@@ -459,7 +459,7 @@ static void server_cleanup(ecewo__server_t *srv) {
   if (!srv->shutdown_requested)
     ecewo_shutdown(srv->app);
 
-  // uv_run() has returned — all in-progress requests are done.
+  // uv_run() has returned - all in-progress requests are done.
   // Safe to call the user's shutdown callback while the loop is still valid.
   if (srv->shutdown_callback)
     srv->shutdown_callback();
@@ -657,7 +657,7 @@ static void stop_request_timer(ecewo__client_t *client) {
   uv_timer_stop(client->request_timeout_timer);
 }
 
-int ecewo_request_timeout(ecewo_response_t *res, uint64_t timeout_ms) {
+int ecewo_timeout_request(ecewo_response_t *res, uint64_t timeout_ms) {
   if (!res || !res->ecewo__client_socket || !res->ecewo__client_socket->data)
     return -1;
 
@@ -1112,7 +1112,7 @@ static void timer_callback(uv_timer_t *handle) {
   }
 }
 
-ecewo_timer_t *ecewo_set_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data) {
+ecewo_timer_t *ecewo_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data) {
   if (!ecewo_server || !ecewo_server->initialized || !callback)
     return NULL;
 
@@ -1146,7 +1146,7 @@ ecewo_timer_t *ecewo_set_timeout(timer_callback_t callback, uint64_t delay_ms, v
   return timer;
 }
 
-ecewo_timer_t *ecewo_set_interval(timer_callback_t callback, uint64_t interval_ms, void *user_data) {
+ecewo_timer_t *ecewo_interval(timer_callback_t callback, uint64_t interval_ms, void *user_data) {
   if (!ecewo_server || !ecewo_server->initialized || !callback)
     return NULL;
 

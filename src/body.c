@@ -52,7 +52,7 @@ typedef struct {
 } StreamCtx;
 
 static StreamCtx *get_ctx(ecewo_request_t *req) {
-  return (StreamCtx *)ecewo_get_context(req, "_body_stream");
+  return (StreamCtx *)ecewo_context_get(req, "_body_stream");
 }
 
 static StreamCtx *get_or_create_ctx(ecewo_request_t *req) {
@@ -74,7 +74,7 @@ static StreamCtx *get_or_create_ctx(ecewo_request_t *req) {
   if (req->ecewo__client_socket)
     ctx->client = (ecewo__client_t *)req->ecewo__client_socket->data;
 
-  ecewo_set_context(req, "_body_stream", ctx);
+  ecewo_context_set(req, "_body_stream", ctx);
   return ctx;
 }
 

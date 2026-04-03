@@ -47,13 +47,13 @@ static void auth_done(ecewo_response_t *res, void *context) {
   user->user_id = ecewo_strdup(res->arena, "user123");
   user->role = ecewo_strdup(res->arena, "admin");
 
-  ecewo_set_context(ctx->req, "user", user);
+  ecewo_context_set(ctx->req, "user", user);
 
   ctx->next(ctx->req, res);
 }
 
 void middleware_async_auth(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
-  const char *token = ecewo_get_header(req, "Authorization");
+  const char *token = ecewo_header_get(req, "Authorization");
 
   if (!token) {
     ecewo_send_text(res, 401, "Unauthorized");
@@ -68,7 +68,7 @@ void middleware_async_auth(ecewo_request_t *req, ecewo_response_t *res, ecewo_ne
 }
 
 void handler_protected(ecewo_request_t *req, ecewo_response_t *res) {
-  user_ctx_t *user = ecewo_get_context(req, "user");
+  user_ctx_t *user = ecewo_context_get(req, "user");
 
   if (!user) {
     ecewo_send_text(res, 500, "Internal Server Error");

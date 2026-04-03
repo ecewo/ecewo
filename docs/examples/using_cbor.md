@@ -52,8 +52,8 @@ void hello_world_cbor(ecewo_request_t *req, ecewo_response_t *res) {
     size_t len = cbor_encoder_get_buffer_size(&encoder, buffer);
 
     // Send the CBOR response with status code 200
-    ecewo_set_header(res, "Content-Type", "application/cbor");
-    ecewo_reply(res, 200, buffer, len);
+    ecewo_header_set(res, "Content-Type", "application/cbor");
+    ecewo_send(res, 200, buffer, len);
 }
 
 int main(void) {

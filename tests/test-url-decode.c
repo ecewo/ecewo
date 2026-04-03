@@ -31,20 +31,20 @@
 
 // Echoes the :name dynamic param
 static void param_handler(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *name = ecewo_get_param(req, "name");
+  const char *name = ecewo_param(req, "name");
   ecewo_send_text(res, 200, name ? name : "no-param");
 }
 
 // Echoes the "q" query value
 static void search_handler(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *q = ecewo_get_query(req, "q");
+  const char *q = ecewo_query(req, "q");
   ecewo_send_text(res, 200, q ? q : "no-query");
 }
 
 // Echoes both a dynamic param and a query value
 static void param_and_query_handler(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *name = ecewo_get_param(req, "name");
-  const char *q = ecewo_get_query(req, "q");
+  const char *name = ecewo_param(req, "name");
+  const char *q = ecewo_query(req, "q");
   char *response = ecewo_sprintf(req->arena, "name=%s,q=%s",
                                  name ? name : "null",
                                  q ? q : "null");

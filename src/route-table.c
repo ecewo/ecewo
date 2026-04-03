@@ -107,7 +107,7 @@ typedef struct route_node {
   uint8_t wildcard_param_count[METHOD_COUNT];
 } route_node_t;
 
-struct route_table {
+struct route_table_s {
   route_node_t *root;
   size_t route_count;
 };

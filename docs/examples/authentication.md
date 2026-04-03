@@ -173,7 +173,7 @@ You have to login first
 
 > [!INFO]
 >
-> `session_get()` is running `cookie_get()` under the hood, but it's specialized to extract the session from the `Cookie` header. While you need to manually free the memory returned by `cookie_get()`, you don't need to do that with `session_get()` — it handles memory management internally.
+> `session_get()` is running `cookie_get()` under the hood, but it's specialized to extract the session from the `Cookie` header. While you need to manually free the memory returned by `cookie_get()`, you don't need to do that with `session_get()` - it handles memory management internally.
 
 ### Getting Session Data
 

@@ -184,7 +184,7 @@ void send_error(ecewo_arena_t *arena, uv_tcp_t *ecewo__client_socket, int error_
     arena_reset(arena);
 }
 
-void ecewo_reply(ecewo_response_t *res, int status, const void *body, size_t body_len) {
+void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body_len) {
   if (!res)
     return;
 
@@ -281,7 +281,7 @@ void ecewo_reply(ecewo_response_t *res, int status, const void *body, size_t bod
     memcpy(response + headers_len, body, body_len);
 
   // uv_write() is an async operation
-  // so when ecewo_reply() returns, client can send
+  // so when ecewo_send() returns, client can send
   // another request and reset the arena,
   // but uv_write() might not be completed yet.
   // Therefore write_req must be
@@ -369,9 +369,9 @@ static bool is_valid_header_value(const char *value) {
   return true;
 }
 
-void ecewo_set_header(ecewo_response_t *res, const char *name, const char *value) {
+void ecewo_header_set(ecewo_response_t *res, const char *name, const char *value) {
   if (!res || !res->arena || !name || !value) {
-    LOG_ERROR("Invalid argument(s) to ecewo_set_header");
+    LOG_ERROR("Invalid argument(s) to ecewo_header_set");
     return;
   }
 
@@ -428,7 +428,7 @@ void ecewo_set_header(ecewo_response_t *res, const char *name, const char *value
   res->headers[res->header_count].value = ecewo_strdup(res->arena, value);
 
   if (!res->headers[res->header_count].name || !res->headers[res->header_count].value) {
-    LOG_ERROR("Failed to allocate memory in ecewo_set_header");
+    LOG_ERROR("Failed to allocate memory in ecewo_header_set");
     return;
   }
 
@@ -452,7 +452,7 @@ void ecewo_redirect(ecewo_response_t *res, int status, const char *url) {
     return;
   }
 
-  ecewo_set_header(res, "Location", url);
+  ecewo_header_set(res, "Location", url);
 
   const char *message;
   size_t message_len;
@@ -484,6 +484,6 @@ void ecewo_redirect(ecewo_response_t *res, int status, const char *url) {
     break;
   }
 
-  ecewo_set_header(res, "Content-Type", "text/plain");
-  ecewo_reply(res, status, message, message_len);
+  ecewo_header_set(res, "Content-Type", "text/plain");
+  ecewo_send(res, status, message, message_len);
 }

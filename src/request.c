@@ -47,28 +47,28 @@ static const char *get_req(const ecewo__req_t *request, const char *key, bool ca
   return NULL;
 }
 
-const char *ecewo_get_param(const ecewo_request_t *req, const char *key) {
+const char *ecewo_param(const ecewo_request_t *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(req->params, key, false);
 }
 
-const char *ecewo_get_query(const ecewo_request_t *req, const char *key) {
+const char *ecewo_query(const ecewo_request_t *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(req->query, key, false);
 }
 
-const char *ecewo_get_header(const ecewo_request_t *req, const char *key) {
+const char *ecewo_header_get(const ecewo_request_t *req, const char *key) {
   if (!req)
     return NULL;
 
   return get_req(req->headers, key, true);
 }
 
-void ecewo_set_context(ecewo_request_t *req, const char *key, void *data) {
+void ecewo_context_set(ecewo_request_t *req, const char *key, void *data) {
   if (!req || !key)
     return;
 
@@ -116,7 +116,7 @@ void ecewo_set_context(ecewo_request_t *req, const char *key, void *data) {
   ctx->count++;
 }
 
-void *ecewo_get_context(ecewo_request_t *req, const char *key) {
+void *ecewo_context_get(ecewo_request_t *req, const char *key) {
   if (!req || !req->ctx || !key)
     return NULL;
 

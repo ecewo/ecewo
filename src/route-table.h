@@ -41,7 +41,7 @@ typedef struct {
   uint8_t count;
 } tokenized_path_t;
 
-typedef struct route_table route_table_t;
+typedef struct route_table_s route_table_t;
 
 typedef struct {
   const char *data;

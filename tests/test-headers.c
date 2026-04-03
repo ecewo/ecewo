@@ -25,9 +25,9 @@
 #include "tester.h"
 
 void handler_echo_headers(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *auth = ecewo_get_header(req, "Authorization");
-  const char *content_type = ecewo_get_header(req, "Content-Type");
-  const char *custom = ecewo_get_header(req, "X-Custom-Header");
+  const char *auth = ecewo_header_get(req, "Authorization");
+  const char *content_type = ecewo_header_get(req, "Content-Type");
+  const char *custom = ecewo_header_get(req, "X-Custom-Header");
 
   char *response = ecewo_sprintf(req->arena, "auth=%s,ct=%s,custom=%s",
                                  auth ? auth : "null",
@@ -62,9 +62,9 @@ int test_request_headers(void) {
 
 void handler_set_headers(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
-  ecewo_set_header(res, "X-Custom-Header", "test-value");
-  ecewo_set_header(res, "X-Request-Id", "12345");
-  ecewo_set_header(res, "Cache-Control", "no-cache");
+  ecewo_header_set(res, "X-Custom-Header", "test-value");
+  ecewo_header_set(res, "X-Request-Id", "12345");
+  ecewo_header_set(res, "Cache-Control", "no-cache");
   ecewo_send_text(res, 200, "OK");
 }
 
@@ -96,8 +96,8 @@ int test_set_headers(void) {
 void handler_header_injection(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
 
-  ecewo_set_header(res, "X-Evil", "value\r\nSet-Cookie: hacked=1");
-  ecewo_set_header(res, "X-Valid", "normal-value");
+  ecewo_header_set(res, "X-Evil", "value\r\nSet-Cookie: hacked=1");
+  ecewo_header_set(res, "X-Valid", "normal-value");
   ecewo_send_text(res, 200, "OK");
 }
 

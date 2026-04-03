@@ -26,9 +26,9 @@
 #include <string.h>
 
 void handler_query_params(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *page = ecewo_get_query(req, "page");
-  const char *limit = ecewo_get_query(req, "limit");
-  const char *sort = ecewo_get_query(req, "sort");
+  const char *page = ecewo_query(req, "page");
+  const char *limit = ecewo_query(req, "limit");
+  const char *sort = ecewo_query(req, "sort");
 
   char *response = ecewo_sprintf(req->arena, "page=%s,limit=%s,sort=%s",
                                  page ? page : "null",

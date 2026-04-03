@@ -178,43 +178,43 @@ void ecewo_shutdown(ecewo_app_t *app);
 void ecewo_atexit(ecewo_app_t *app, shutdown_callback_t callback);
 
 // TIMER FUNCTIONS
-ecewo_timer_t *ecewo_set_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data);
-ecewo_timer_t *ecewo_set_interval(timer_callback_t callback, uint64_t interval_ms, void *user_data);
+ecewo_timer_t *ecewo_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data);
+ecewo_timer_t *ecewo_interval(timer_callback_t callback, uint64_t interval_ms, void *user_data);
 void ecewo_clear_timer(ecewo_timer_t *timer);
 
 // Enable request timeout for the current request
 // Returns 0 on success, -1 on error
 // Call this in your route handler or middleware to set a timeout
 // Call it multiple times to reset or renew
-int ecewo_request_timeout(ecewo_response_t *res, uint64_t timeout_ms);
+int ecewo_timeout_request(ecewo_response_t *res, uint64_t timeout_ms);
 
 // REQUEST FUNCTIONS
-const char *ecewo_get_param(const ecewo_request_t *req, const char *key);
-const char *ecewo_get_query(const ecewo_request_t *req, const char *key);
-const char *ecewo_get_header(const ecewo_request_t *req, const char *key);
+const char *ecewo_param(const ecewo_request_t *req, const char *key);
+const char *ecewo_query(const ecewo_request_t *req, const char *key);
+const char *ecewo_header_get(const ecewo_request_t *req, const char *key);
 
-// RESPONSE FUNCTIONS
-void ecewo_reply(ecewo_response_t *res, int status, const void *body, size_t body_len);
-void ecewo_redirect(ecewo_response_t *res, int status, const char *url);
-
-// ecewo_set_header DOES NOT check for duplicates!
+// ecewo_header_set DOES NOT check for duplicates!
 // User is responsible for avoiding duplicate headers.
 // Multiple calls with same name will add multiple headers.
-void ecewo_set_header(ecewo_response_t *res, const char *name, const char *value);
+void ecewo_header_set(ecewo_response_t *res, const char *name, const char *value);
+
+// RESPONSE FUNCTIONS
+void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body_len);
+void ecewo_redirect(ecewo_response_t *res, int status, const char *url);
 
 static inline void ecewo_send_text(ecewo_response_t *res, int status, const char *body) {
-  ecewo_set_header(res, "Content-Type", "text/plain");
-  ecewo_reply(res, status, body, strlen(body));
+  ecewo_header_set(res, "Content-Type", "text/plain");
+  ecewo_send(res, status, body, strlen(body));
 }
 
 static inline void ecewo_send_html(ecewo_response_t *res, int status, const char *body) {
-  ecewo_set_header(res, "Content-Type", "text/html");
-  ecewo_reply(res, status, body, strlen(body));
+  ecewo_header_set(res, "Content-Type", "text/html");
+  ecewo_send(res, status, body, strlen(body));
 }
 
 static inline void ecewo_send_json(ecewo_response_t *res, int status, const char *body) {
-  ecewo_set_header(res, "Content-Type", "application/json");
-  ecewo_reply(res, status, body, strlen(body));
+  ecewo_header_set(res, "Content-Type", "application/json");
+  ecewo_send(res, status, body, strlen(body));
 }
 
 // MIDDLEWARE FUNCTIONS
@@ -277,8 +277,8 @@ void ecewo__register_options(ecewo_app_t *app, const char *path, int mw_count, .
 #define ECEWO_OPTIONS(app, path, ...) \
   ecewo__register_options(app, path, ECEWO__MIDDLEWARE(__VA_ARGS__), __VA_ARGS__)
 
-void ecewo_set_context(ecewo_request_t *req, const char *key, void *data);
-void *ecewo_get_context(ecewo_request_t *req, const char *key);
+void ecewo_context_set(ecewo_request_t *req, const char *key, void *data);
+void *ecewo_context_get(ecewo_request_t *req, const char *key);
 
 // TASK SPAWN
 typedef void (*spawn_handler_t)(void *context);

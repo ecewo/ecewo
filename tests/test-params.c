@@ -26,7 +26,7 @@
 #include <string.h>
 
 void handler_single_param(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *id = ecewo_get_param(req, "userId");
+  const char *id = ecewo_param(req, "userId");
   if (!id) {
     ecewo_send_text(res, 400, "Missing id");
     return;
@@ -36,9 +36,9 @@ void handler_single_param(ecewo_request_t *req, ecewo_response_t *res) {
 }
 
 void handler_multi_param(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *userId = ecewo_get_param(req, "userId");
-  const char *postId = ecewo_get_param(req, "postId");
-  const char *commentId = ecewo_get_param(req, "commentId");
+  const char *userId = ecewo_param(req, "userId");
+  const char *postId = ecewo_param(req, "postId");
+  const char *commentId = ecewo_param(req, "commentId");
 
   if (!userId || !postId || !commentId) {
     ecewo_send_text(res, 400, "Missing params");
@@ -50,16 +50,16 @@ void handler_multi_param(ecewo_request_t *req, ecewo_response_t *res) {
 }
 
 void handler_overflow_param(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *id1 = ecewo_get_param(req, "id1");
-  const char *id2 = ecewo_get_param(req, "id2");
-  const char *id3 = ecewo_get_param(req, "id3");
-  const char *id4 = ecewo_get_param(req, "id4");
-  const char *id5 = ecewo_get_param(req, "id5");
-  const char *id6 = ecewo_get_param(req, "id6");
-  const char *id7 = ecewo_get_param(req, "id7");
-  const char *id8 = ecewo_get_param(req, "id8");
-  const char *id9 = ecewo_get_param(req, "id9");
-  const char *id10 = ecewo_get_param(req, "id10");
+  const char *id1 = ecewo_param(req, "id1");
+  const char *id2 = ecewo_param(req, "id2");
+  const char *id3 = ecewo_param(req, "id3");
+  const char *id4 = ecewo_param(req, "id4");
+  const char *id5 = ecewo_param(req, "id5");
+  const char *id6 = ecewo_param(req, "id6");
+  const char *id7 = ecewo_param(req, "id7");
+  const char *id8 = ecewo_param(req, "id8");
+  const char *id9 = ecewo_param(req, "id9");
+  const char *id10 = ecewo_param(req, "id10");
 
   char *response = ecewo_sprintf(req->arena, "%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
                                  id1, id2, id3, id4, id5, id6, id7, id8, id9, id10);

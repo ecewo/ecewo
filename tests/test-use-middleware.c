@@ -25,18 +25,18 @@
 #include "tester.h"
 
 static void global_tag_mw(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
-  ecewo_set_context(req, "global", "yes");
+  ecewo_context_set(req, "global", "yes");
   next(req, res);
 }
 
 static void api_tag_mw(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next) {
-  ecewo_set_context(req, "api", "yes");
+  ecewo_context_set(req, "api", "yes");
   next(req, res);
 }
 
 static void tag_handler(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *global_tag = ecewo_get_context(req, "global");
-  const char *api_tag = ecewo_get_context(req, "api");
+  const char *global_tag = ecewo_context_get(req, "global");
+  const char *api_tag = ecewo_context_get(req, "api");
 
   char *buf = ecewo_sprintf(req->arena, "global=%s,api=%s",
                             global_tag ? global_tag : "no",

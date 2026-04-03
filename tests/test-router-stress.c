@@ -50,7 +50,7 @@
 
 static void specific_handler(ecewo_request_t *req, ecewo_response_t *res) {
   // Echo the captured :id value so the test can also verify param extraction
-  const char *id = ecewo_get_param(req, "id");
+  const char *id = ecewo_param(req, "id");
   ecewo_send_text(res, 200, id ? id : "no-id");
 }
 

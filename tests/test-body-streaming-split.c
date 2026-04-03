@@ -22,14 +22,7 @@
 
 // ===============================================================================
 
-// Test: streaming body that arrives across two separate TCP reads.
-//
-// The normal body-streaming test sends headers + body in a single write, so
-// all data lands in one on_read callback.  Here we deliberately send the HTTP
-// headers first, wait 50 ms, then send the body — forcing PATH A
-// (PARSE_PAUSED → PARSE_INCOMPLETE) followed by PATH B (PARSE_SUCCESS on the
-// next on_read) through the new stream_req/stream_res save/restore logic in
-// router.c.
+// Streaming body that arrives across two separate TCP reads.
 
 #include "ecewo.h"
 #include "ecewo-mock.h"
@@ -60,14 +53,14 @@ typedef struct {
 } SplitCtx;
 
 static void on_chunk(ecewo_request_t *req, const uint8_t *data, size_t len) {
-  SplitCtx *ctx = ecewo_get_context(req, "split_ctx");
+  SplitCtx *ctx = ecewo_context_get(req, "split_ctx");
   ctx->chunks_received++;
   ctx->total_bytes += len;
   (void)data;
 }
 
 static void on_end(ecewo_request_t *req, ecewo_response_t *res) {
-  SplitCtx *ctx = ecewo_get_context(req, "split_ctx");
+  SplitCtx *ctx = ecewo_context_get(req, "split_ctx");
   char *body = ecewo_sprintf(req->arena, "chunks=%d,bytes=%zu",
                              ctx->chunks_received, ctx->total_bytes);
   ecewo_send_text(res, OK, body);
@@ -76,7 +69,7 @@ static void on_end(ecewo_request_t *req, ecewo_response_t *res) {
 static void handler(ecewo_request_t *req, ecewo_response_t *res) {
   SplitCtx *ctx = ecewo_alloc(req->arena, sizeof(SplitCtx));
   memset(ctx, 0, sizeof(SplitCtx));
-  ecewo_set_context(req, "split_ctx", ctx);
+  ecewo_context_set(req, "split_ctx", ctx);
   ecewo_body_on_data(req, on_chunk);
   ecewo_body_on_end(req, res, on_end);
 }
@@ -85,8 +78,8 @@ static void setup_routes(ecewo_app_t *app) {
   ECEWO_POST(app, "/streaming-split", ecewo_body_stream, handler);
 }
 
-// Send headers and body as two separate TCP writes with a 50 ms gap to force
-// the server into PATH B (body arriving after headers were already processed).
+// Send headers and body as two separate TCP writes with a 50 ms gap
+// to force body arrive after headers were already processed
 static int test_body_split_across_reads(void) {
   const char *payload = "Hello, split world!"; // 19 bytes
   size_t payload_len = strlen(payload);
@@ -103,7 +96,6 @@ static int test_body_split_across_reads(void) {
   sock_t sock = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_TRUE(sock != SOCK_INVALID);
 
-  // Disable Nagle so each send() becomes its own TCP segment
   int one = 1;
   setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char *)&one, sizeof(one));
 

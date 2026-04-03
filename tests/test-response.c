@@ -68,7 +68,7 @@ int test_html_content_type(void) {
 
 // STATUS CODES
 void handler_status_codes(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *code = ecewo_get_query(req, "code");
+  const char *code = ecewo_query(req, "code");
   if (!code) {
     ecewo_send_text(res, 400, "Missing code");
     return;
