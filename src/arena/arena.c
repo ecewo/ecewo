@@ -28,9 +28,9 @@
 #include <stdbool.h>
 #include "arena-internal.h"
 
-static inline arena_region_t *new_region(size_t capacity) {
-  size_t size_bytes = sizeof(arena_region_t) + sizeof(uintptr_t) * capacity;
-  arena_region_t *r = (arena_region_t *)malloc(size_bytes);
+static inline ecewo__arena_region_t *new_region(size_t capacity) {
+  size_t size_bytes = sizeof(ecewo__arena_region_t) + sizeof(uintptr_t) * capacity;
+  ecewo__arena_region_t *r = (ecewo__arena_region_t *)malloc(size_bytes);
 
   if (!r)
     return NULL;
@@ -41,12 +41,12 @@ static inline arena_region_t *new_region(size_t capacity) {
   return r;
 }
 
-static inline void free_region(arena_region_t *r) {
+static inline void free_region(ecewo__arena_region_t *r) {
   free(r);
 }
 
-bool new_region_to(arena_region_t **begin, arena_region_t **end, size_t capacity) {
-  arena_region_t *region = new_region(capacity);
+bool new_region_to(ecewo__arena_region_t **begin, ecewo__arena_region_t **end, size_t capacity) {
+  ecewo__arena_region_t *region = new_region(capacity);
   if (!region) {
     *end = NULL;
     return false;
@@ -179,9 +179,9 @@ char *ecewo_sprintf(ecewo_arena_t *arena, const char *format, ...) {
 }
 
 void ecewo_free(ecewo_arena_t *arena) {
-  arena_region_t *r = arena->begin;
+  ecewo__arena_region_t *r = arena->begin;
   while (r) {
-    arena_region_t *r0 = r;
+    ecewo__arena_region_t *r0 = r;
     r = r->next;
     free_region(r0);
   }
@@ -193,7 +193,7 @@ void arena_reset(ecewo_arena_t *a) {
   if (!a || !a->begin)
     return;
 
-  arena_region_t *region = a->begin;
+  ecewo__arena_region_t *region = a->begin;
   while (region) {
     region->count = 0;
     region = region->next;

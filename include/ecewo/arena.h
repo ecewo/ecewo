@@ -25,11 +25,11 @@
 
 #include <string.h>
 
-typedef struct arena_region_t arena_region_t;
+typedef struct ecewo__arena_region_s ecewo__arena_region_t;
 
 typedef struct ecewo_arena_t {
-  arena_region_t *begin;
-  arena_region_t *end;
+  ecewo__arena_region_t *begin;
+  ecewo__arena_region_t *end;
 } ecewo_arena_t;
 
 typedef struct {
