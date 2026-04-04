@@ -1079,7 +1079,7 @@ void ecewo_listen(ecewo_app_t *app, uint16_t port) {
   ecewo_run(app);
 }
 
-void ecewo_atexit(ecewo_app_t *app, ecewo_shutdown_cb_t callback) {
+void ecewo_atexit(ecewo_app_t *app, void (*callback)(void)) {
   if (app && app->server)
     app->server->shutdown_callback = callback;
 }

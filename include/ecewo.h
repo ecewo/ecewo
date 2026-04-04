@@ -141,9 +141,6 @@ typedef void (*ecewo_handler_t)(ecewo_request_t *req, ecewo_response_t *res);
 /** Signature for middleware: receives `req`, `res`, and `next()`. Call `next()` to pass control downstream. */
 typedef void (*ecewo_middleware_t)(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next);
 
-/** Callback invoked by `ecewo_atexit()` during graceful shutdown, before the event loop exits. */
-typedef void (*ecewo_shutdown_cb_t)(void);
-
 /** Callback invoked by `ecewo_timeout()` or `ecewo_interval()` when the timer fires. */
 typedef void (*ecewo_timer_cb_t)(void *user_data);
 
@@ -177,7 +174,7 @@ ECEWO_EXPORT void ecewo_shutdown(ecewo_app_t *app);
 /** Register a callback to be called during shutdown, before the event loop exits.
  *  Useful for releasing resources such as database connections or thread pools.
  *  Multiple callbacks may be registered; they are called in registration order. */
-ECEWO_EXPORT void ecewo_atexit(ecewo_app_t *app, ecewo_shutdown_cb_t callback);
+ECEWO_EXPORT void ecewo_atexit(ecewo_app_t *app, void (*callback)(void));
 
 // ---------------------------------------------------------------------------
 // TIMER FUNCTIONS
