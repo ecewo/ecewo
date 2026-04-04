@@ -78,18 +78,23 @@ static void write_completion_cb(uv_write_t *req, int status) {
 }
 
 static bool validate_client_for_response(ecewo_response_t *res) {
-  if (!res || !res->ecewo__client_socket || !res->ecewo__client_socket->data)
+  if (!res || !res->ecewo__client_socket)
     return false;
 
-  if (uv_is_closing((uv_handle_t *)res->ecewo__client_socket))
+  uv_tcp_t *sock = (uv_tcp_t *)res->ecewo__client_socket;
+
+  if (!sock->data)
     return false;
 
-  ecewo__client_t *client = (ecewo__client_t *)res->ecewo__client_socket->data;
+  if (uv_is_closing((uv_handle_t *)sock))
+    return false;
+
+  ecewo__client_t *client = (ecewo__client_t *)sock->data;
 
   if (!client->valid || client->closing)
     return false;
 
-  if (!uv_is_writable((uv_stream_t *)res->ecewo__client_socket))
+  if (!uv_is_writable((uv_stream_t *)sock))
     return false;
 
   return true;
@@ -220,7 +225,7 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
   if (headers_size > 0) {
     all_headers = ecewo_alloc(res->arena, headers_size + 1);
     if (!all_headers) {
-      send_error(res->arena, res->ecewo__client_socket, 500);
+      send_error(res->arena, (uv_tcp_t *)res->ecewo__client_socket, 500);
       return;
     }
 
@@ -244,7 +249,7 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
   } else {
     all_headers = ecewo_strdup(res->arena, "");
     if (!all_headers) {
-      send_error(res->arena, res->ecewo__client_socket, 500);
+      send_error(res->arena, (uv_tcp_t *)res->ecewo__client_socket, 500);
       return;
     }
   }
@@ -295,13 +300,14 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
     return;
   }
 
+  uv_tcp_t *sock = (uv_tcp_t *)res->ecewo__client_socket;
   write_req->data = response;
-  write_req->client = (ecewo__client_t *)res->ecewo__client_socket->data;
+  write_req->client = (ecewo__client_t *)sock->data;
   if (write_req->client)
     ecewo_client_ref(write_req->client);
   write_req->buf = uv_buf_init(response, (unsigned int)total_len);
 
-  if (uv_is_closing((uv_handle_t *)res->ecewo__client_socket)) {
+  if (uv_is_closing((uv_handle_t *)sock)) {
     free(response);
     if (write_req->client)
       ecewo_client_unref(write_req->client);
@@ -309,7 +315,7 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
     return;
   }
 
-  int result = uv_write(&write_req->req, (uv_stream_t *)res->ecewo__client_socket,
+  int result = uv_write(&write_req->req, (uv_stream_t *)sock,
                         &write_req->buf, 1, write_completion_cb);
 
   if (result < 0) {
@@ -448,7 +454,7 @@ void ecewo_redirect(ecewo_response_t *res, int status, const char *url) {
 
   if (!is_valid_header_value(url)) {
     LOG_ERROR("Invalid redirect URL (CRLF detected)");
-    ecewo_send_text(res, BAD_REQUEST, "Bad Request");
+    ecewo_send_text(res, ECEWO_BAD_REQUEST, "Bad Request");
     return;
   }
 
@@ -458,23 +464,23 @@ void ecewo_redirect(ecewo_response_t *res, int status, const char *url) {
   size_t message_len;
 
   switch (status) {
-  case MOVED_PERMANENTLY:
+  case ECEWO_MOVED_PERMANENTLY:
     message = "Moved Permanently";
     message_len = 17;
     break;
-  case FOUND:
+  case ECEWO_FOUND:
     message = "Found";
     message_len = 5;
     break;
-  case SEE_OTHER:
+  case ECEWO_SEE_OTHER:
     message = "See Other";
     message_len = 9;
     break;
-  case TEMPORARY_REDIRECT:
+  case ECEWO_TEMPORARY_REDIRECT:
     message = "Temporary Redirect";
     message_len = 18;
     break;
-  case PERMANENT_REDIRECT:
+  case ECEWO_PERMANENT_REDIRECT:
     message = "Permanent Redirect";
     message_len = 18;
     break;
@@ -486,4 +492,19 @@ void ecewo_redirect(ecewo_response_t *res, int status, const char *url) {
 
   ecewo_header_set(res, "Content-Type", "text/plain");
   ecewo_send(res, status, message, message_len);
+}
+
+void ecewo_send_text(ecewo_response_t *res, int status, const char *body) {
+  ecewo_header_set(res, "Content-Type", "text/plain");
+  ecewo_send(res, status, body, strlen(body));
+}
+
+void ecewo_send_html(ecewo_response_t *res, int status, const char *body) {
+  ecewo_header_set(res, "Content-Type", "text/html");
+  ecewo_send(res, status, body, strlen(body));
+}
+
+void ecewo_send_json(ecewo_response_t *res, int status, const char *body) {
+  ecewo_header_set(res, "Content-Type", "application/json");
+  ecewo_send(res, status, body, strlen(body));
 }

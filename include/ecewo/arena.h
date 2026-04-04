@@ -24,6 +24,7 @@
 #define ECEWO_ARENA_H
 
 #include <string.h>
+#include "ecewo/export.h"
 
 typedef struct ecewo__arena_region_s ecewo__arena_region_t;
 
@@ -36,20 +37,20 @@ typedef struct {
   char *items;
   size_t count;
   size_t capacity;
-} StringBuilder;
+} ecewo_string_builder_t;
 
-void *ecewo_alloc(ecewo_arena_t *arena, size_t size_bytes);
-void *ecewo_realloc(ecewo_arena_t *arena, void *oldptr, size_t oldsz, size_t newsz);
-char *ecewo_strdup(ecewo_arena_t *arena, const char *cstr);
-void *ecewo_memdup(ecewo_arena_t *arena, void *data, size_t size);
-char *ecewo_sprintf(ecewo_arena_t *arena, const char *format, ...);
-void ecewo_free(ecewo_arena_t *arena);
+ECEWO_EXPORT void *ecewo_alloc(ecewo_arena_t *arena, size_t size_bytes);
+ECEWO_EXPORT void *ecewo_realloc(ecewo_arena_t *arena, void *oldptr, size_t oldsz, size_t newsz);
+ECEWO_EXPORT char *ecewo_strdup(ecewo_arena_t *arena, const char *cstr);
+ECEWO_EXPORT void *ecewo_memdup(ecewo_arena_t *arena, void *data, size_t size);
+ECEWO_EXPORT char *ecewo_sprintf(ecewo_arena_t *arena, const char *format, ...);
+ECEWO_EXPORT void ecewo_free(ecewo_arena_t *arena);
 
-ecewo_arena_t *ecewo_arena_borrow(void);
-void ecewo_arena_return(ecewo_arena_t *arena);
+ECEWO_EXPORT ecewo_arena_t *ecewo_arena_borrow(void);
+ECEWO_EXPORT void ecewo_arena_return(ecewo_arena_t *arena);
 
 #ifdef ECEWO_DEBUG
-void ecewo_arena_pool_stats(void);
+ECEWO_EXPORT void ecewo_arena_pool_stats(void);
 #endif
 
 #ifndef ARENA_DA_INIT_CAP
@@ -57,16 +58,16 @@ void ecewo_arena_pool_stats(void);
 #endif
 
 #ifdef __cplusplus
-#define cast_ptr(ptr) (decltype(ptr))
+#define ECEWO__CAST_PTR(ptr) (decltype(ptr))
 #else
-#define cast_ptr(...)
+#define ECEWO__CAST_PTR(...)
 #endif
 
 #define ecewo_da_append(a, da, item)                                                      \
   do {                                                                                    \
     if ((da)->count >= (da)->capacity) {                                                  \
       size_t new_capacity = (da)->capacity == 0 ? ARENA_DA_INIT_CAP : (da)->capacity * 2; \
-      (da)->items = cast_ptr((da)->items) ecewo_realloc(                                  \
+      (da)->items = ECEWO__CAST_PTR((da)->items) ecewo_realloc(                           \
           (a), (da)->items,                                                               \
           (da)->capacity * sizeof(*(da)->items),                                          \
           new_capacity * sizeof(*(da)->items));                                           \
@@ -84,7 +85,7 @@ void ecewo_arena_pool_stats(void);
         new_capacity = ARENA_DA_INIT_CAP;                                                     \
       while ((da)->count + (new_items_count) > new_capacity)                                  \
         new_capacity *= 2;                                                                    \
-      (da)->items = cast_ptr((da)->items) ecewo_realloc(                                      \
+      (da)->items = ECEWO__CAST_PTR((da)->items) ecewo_realloc(                               \
           (a), (da)->items,                                                                   \
           (da)->capacity * sizeof(*(da)->items),                                              \
           new_capacity * sizeof(*(da)->items));                                               \

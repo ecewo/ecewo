@@ -43,9 +43,9 @@ void context_middleware(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_
     return;
   }
 
-  user_ctx_t *ctx = ecewo_alloc(req->arena, sizeof(user_ctx_t));
-  ctx->user_id = ecewo_strdup(req->arena, "user123");
-  ctx->role = ecewo_strdup(req->arena, "admin");
+  user_ctx_t *ctx = ecewo_alloc(ecewo_req_arena(req), sizeof(user_ctx_t));
+  ctx->user_id = ecewo_strdup(ecewo_req_arena(req), "user123");
+  ctx->role = ecewo_strdup(ecewo_req_arena(req), "admin");
 
   ecewo_context_set(req, "user_ctx", ctx);
 
@@ -61,7 +61,7 @@ void context_handler(ecewo_request_t *req, ecewo_response_t *res) {
   }
 
   if (strcmp(ctx->user_id, "user123") != 0 || strcmp(ctx->role, "admin") != 0) {
-    ecewo_send_text(res, FORBIDDEN, "Forbidden");
+    ecewo_send_text(res, ECEWO_FORBIDDEN, "Forbidden");
     return;
   }
 
@@ -185,7 +185,7 @@ void handler_multiple_keys(ecewo_request_t *req, ecewo_response_t *res) {
   const char *v2 = ecewo_context_get(req, "key2");
   const char *v3 = ecewo_context_get(req, "key3");
 
-  char *response = ecewo_sprintf(req->arena, "%s,%s,%s", v1, v2, v3);
+  char *response = ecewo_sprintf(ecewo_req_arena(req), "%s,%s,%s", v1, v2, v3);
   ecewo_send_text(res, 200, response);
 }
 
@@ -247,7 +247,7 @@ void handler_chain_context(ecewo_request_t *req, ecewo_response_t *res) {
   const char *v1 = ecewo_context_get(req, "mw1");
   const char *v2 = ecewo_context_get(req, "mw2");
 
-  char *response = ecewo_sprintf(req->arena, "%s,%s",
+  char *response = ecewo_sprintf(ecewo_req_arena(req), "%s,%s",
                                  v1 ? v1 : "null",
                                  v2 ? v2 : "null");
 
@@ -282,10 +282,10 @@ typedef struct
 } complex_user_t;
 
 void handler_complex_data(ecewo_request_t *req, ecewo_response_t *res) {
-  complex_user_t *user = ecewo_alloc(req->arena, sizeof(complex_user_t));
+  complex_user_t *user = ecewo_alloc(ecewo_req_arena(req), sizeof(complex_user_t));
   user->id = 123;
-  user->name = ecewo_strdup(req->arena, "John Doe");
-  user->email = ecewo_strdup(req->arena, "john@example.com");
+  user->name = ecewo_strdup(ecewo_req_arena(req), "John Doe");
+  user->email = ecewo_strdup(ecewo_req_arena(req), "john@example.com");
   user->is_admin = true;
 
   ecewo_context_set(req, "user", user);
@@ -293,7 +293,7 @@ void handler_complex_data(ecewo_request_t *req, ecewo_response_t *res) {
   // Retrieve and verify
   complex_user_t *retrieved = ecewo_context_get(req, "user");
 
-  char *response = ecewo_sprintf(req->arena,
+  char *response = ecewo_sprintf(ecewo_req_arena(req),
                                  "id:%d,name:%s,email:%s,admin:%s",
                                  retrieved->id,
                                  retrieved->name,

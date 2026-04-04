@@ -28,7 +28,7 @@
 // Null-only produces a single NUL byte
 int test_sb_null_only(void) {
   ecewo_arena_t a = {0};
-  StringBuilder sb = {0};
+  ecewo_string_builder_t sb = {0};
 
   ecewo_sb_append_null(&a, &sb);
 
@@ -43,7 +43,7 @@ int test_sb_null_only(void) {
 // Single string append + null
 int test_sb_single_append(void) {
   ecewo_arena_t a = {0};
-  StringBuilder sb = {0};
+  ecewo_string_builder_t sb = {0};
 
   ecewo_sb_append_cstr(&a, &sb, "hello");
   ecewo_sb_append_null(&a, &sb);
@@ -59,7 +59,7 @@ int test_sb_single_append(void) {
 // Single char appended via ecewo_da_append
 int test_sb_single_char(void) {
   ecewo_arena_t a = {0};
-  StringBuilder sb = {0};
+  ecewo_string_builder_t sb = {0};
 
   ecewo_da_append(&a, &sb, 'X');
   ecewo_sb_append_null(&a, &sb);
@@ -76,7 +76,7 @@ int test_sb_single_char(void) {
 // Building a slash-joined path
 int test_sb_path_join(void) {
   ecewo_arena_t a = {0};
-  StringBuilder sb = {0};
+  ecewo_string_builder_t sb = {0};
 
   const char *parts[] = {"api", "v1", "users"};
   for (int i = 0; i < 3; i++) {
@@ -95,7 +95,7 @@ int test_sb_path_join(void) {
 // Many appends cross the ARENA_DA_INIT_CAP boundary
 int test_sb_large_growth(void) {
   ecewo_arena_t a = {0};
-  StringBuilder sb = {0};
+  ecewo_string_builder_t sb = {0};
 
   // Each iteration appends "ab" (2 bytes). 200 iterations = 400 chars,
   // which exceeds ARENA_DA_INIT_CAP=256 and forces at least one realloc.
@@ -123,7 +123,7 @@ int test_sb_large_growth(void) {
 // Reuse after ecewo_free starts fresh
 int test_sb_reuse_after_free(void) {
   ecewo_arena_t a = {0};
-  StringBuilder sb = {0};
+  ecewo_string_builder_t sb = {0};
 
   ecewo_sb_append_cstr(&a, &sb, "first");
   ecewo_sb_append_null(&a, &sb);
@@ -131,7 +131,7 @@ int test_sb_reuse_after_free(void) {
   ecewo_free(&a);
 
   // Reset the struct and arena, build a second string
-  sb = (StringBuilder){0};
+  sb = (ecewo_string_builder_t){0};
   ecewo_sb_append_cstr(&a, &sb, "second");
   ecewo_sb_append_null(&a, &sb);
   ASSERT_EQ_STR("second", sb.items);

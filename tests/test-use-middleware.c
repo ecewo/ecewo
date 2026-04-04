@@ -38,7 +38,7 @@ static void tag_handler(ecewo_request_t *req, ecewo_response_t *res) {
   const char *global_tag = ecewo_context_get(req, "global");
   const char *api_tag = ecewo_context_get(req, "api");
 
-  char *buf = ecewo_sprintf(req->arena, "global=%s,api=%s",
+  char *buf = ecewo_sprintf(ecewo_req_arena(req), "global=%s,api=%s",
                             global_tag ? global_tag : "no",
                             api_tag ? api_tag : "no");
   ecewo_send_text(res, 200, buf);

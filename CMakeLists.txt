@@ -143,6 +143,14 @@ if(NOT TARGET ecewo::ecewo)
   add_library(ecewo::ecewo ALIAS ecewo)
   include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugins.cmake)
 
+  # Always tell the library it is being built (triggers dllexport on Windows).
+  target_compile_definitions(ecewo PRIVATE ECEWO_BUILDING)
+
+  # Propagate ECEWO_SHARED to consumers so they use dllimport on Windows.
+  if(ECEWO_BUILD_SHARED)
+    target_compile_definitions(ecewo PUBLIC ECEWO_SHARED)
+  endif()
+
   if(ECEWO_BUILD_TESTS)
     target_compile_definitions(ecewo PRIVATE ECEWO_TEST_MODE=1)
   endif()

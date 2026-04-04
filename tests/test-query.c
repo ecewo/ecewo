@@ -30,7 +30,7 @@ void handler_query_params(ecewo_request_t *req, ecewo_response_t *res) {
   const char *limit = ecewo_query(req, "limit");
   const char *sort = ecewo_query(req, "sort");
 
-  char *response = ecewo_sprintf(req->arena, "page=%s,limit=%s,sort=%s",
+  char *response = ecewo_sprintf(ecewo_req_arena(req), "page=%s,limit=%s,sort=%s",
                                  page ? page : "null",
                                  limit ? limit : "null",
                                  sort ? sort : "null");

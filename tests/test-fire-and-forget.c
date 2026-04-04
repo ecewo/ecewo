@@ -47,12 +47,12 @@ void handler_fire_and_forget(ecewo_request_t *req, ecewo_response_t *res) {
   ctx->increment = 10;
 
   ecewo_spawn(ctx, background_work, NULL);
-  ecewo_send_text(res, ACCEPTED, "Status: Accepted");
+  ecewo_send_text(res, ECEWO_ACCEPTED, "Status: Accepted");
 }
 
 void handler_check_counter(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
-  char *response = ecewo_sprintf(req->arena, "Counter: %d", background_counter);
+  char *response = ecewo_sprintf(ecewo_req_arena(req), "Counter: %d", background_counter);
   ecewo_send_text(res, 200, response);
 }
 

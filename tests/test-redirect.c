@@ -26,12 +26,12 @@
 
 void handler_redirect(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
-  ecewo_redirect(res, MOVED_PERMANENTLY, "/new-location");
+  ecewo_redirect(res, ECEWO_MOVED_PERMANENTLY, "/new-location");
 }
 
 void handler_new_location(ecewo_request_t *req, ecewo_response_t *res) {
   (void)req;
-  ecewo_send_text(res, OK, "New page content");
+  ecewo_send_text(res, ECEWO_OK, "New page content");
 }
 
 int test_redirect(void) {

@@ -26,13 +26,13 @@
 #include <string.h>
 
 void handler_body(ecewo_request_t *req, ecewo_response_t *res) {
-  const char *body_str = req->body ? (const char *)req->body : "0";
+  const char *body_str = ecewo_req_body(req) ? (const char *)ecewo_req_body(req) : "0";
 
-  char *response = ecewo_sprintf(req->arena,
+  char *response = ecewo_sprintf(ecewo_req_arena(req),
                                  "len=%zu, body=%s, method=%s",
-                                 req->body_len,
+                                 ecewo_req_body_len(req),
                                  body_str,
-                                 req->method);
+                                 ecewo_req_method(req));
 
   ecewo_send_text(res, 200, response);
 }

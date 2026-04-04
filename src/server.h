@@ -23,12 +23,61 @@
 #define ECEWO_SERVER_H
 
 #include "ecewo.h"
+#include "request.h"
 #include "http.h"
 #include "middleware.h"
 #include "route-table.h"
 #include "uv.h"
 #include "llhttp.h"
 #include <stdatomic.h>
+
+/* Full definitions of the three types that are opaque in the public header.
+ * Only internal source files (which include this header) may access fields
+ * directly; external code must use the accessor functions. */
+
+struct ecewo_app_s {
+  struct ecewo__server_s *server;
+  ecewo_arena_t *arena;
+  int max_connections;
+  int listen_backlog;
+  uint64_t idle_timeout_ms;
+  uint64_t request_timeout_ms;
+  uint64_t cleanup_interval_ms;
+  uint64_t shutdown_timeout_ms;
+};
+
+struct ecewo_request_s {
+  ecewo_app_t *app;
+  ecewo_arena_t *arena;
+  void *ecewo__client_socket;
+  char *method;
+  char *path;
+  uint8_t *body;
+  size_t body_len;
+  ecewo__req_t *headers;
+  ecewo__req_t *query;
+  ecewo__req_t *params;
+  ecewo__req_ctx_t *ctx;
+  uint8_t http_major;
+  uint8_t http_minor;
+  bool is_head_request;
+  void *chain;
+};
+
+struct ecewo_response_s {
+  ecewo_arena_t *arena;
+  void *ecewo__client_socket;
+  uint16_t status;
+  char *content_type;
+  void *body;
+  size_t body_len;
+  bool keep_alive;
+  ecewo__res_header_t *headers;
+  uint16_t header_count;
+  uint16_t header_capacity;
+  bool replied;
+  bool is_head_request;
+};
 
 #ifndef READ_BUFFER_SIZE
 #define READ_BUFFER_SIZE 16384
@@ -48,7 +97,7 @@ struct ecewo__server_s {
   uv_signal_t sigterm_handle;
   uv_async_t shutdown_async;
   uv_async_t async_work_handle; // unreffed while idle, reffed while async_work_count > 0
-  shutdown_callback_t shutdown_callback;
+  ecewo_shutdown_cb_t shutdown_callback;
   ecewo__client_t *client_list_head;
   uv_timer_t *cleanup_timer;
   uv_timer_t *force_close_timer;

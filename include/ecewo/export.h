@@ -1,4 +1,4 @@
-// Copyright 2025-2026 Savas Sahin <savashn@proton.me>
+// Copyright 2026 Savas Sahin <savashn@proton.me>
 
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -19,30 +19,21 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef ECEWO_MIDDLEWARE_H
-#define ECEWO_MIDDLEWARE_H
+#ifndef ECEWO_EXPORT_H
+#define ECEWO_EXPORT_H
 
-#include "ecewo.h"
-#include "llhttp.h"
-
-typedef struct ecewo__server_s ecewo__server_t;
-
-#ifndef INITIAL_MW_CAPACITY
-#define INITIAL_MW_CAPACITY 8
+#if defined(_WIN32) || defined(__CYGWIN__)
+  #if defined(ECEWO_BUILDING)
+    #define ECEWO_EXPORT __declspec(dllexport)
+  #elif defined(ECEWO_SHARED)
+    #define ECEWO_EXPORT __declspec(dllimport)
+  #else
+    #define ECEWO_EXPORT
+  #endif
+#elif defined(__GNUC__) && __GNUC__ >= 4
+  #define ECEWO_EXPORT __attribute__((visibility("default")))
+#else
+  #define ECEWO_EXPORT
 #endif
-
-typedef struct MiddlewareInfo {
-  ecewo__middleware_t *middleware;
-  uint16_t middleware_count;
-  ecewo__handler_t handler;
-} MiddlewareInfo;
-
-typedef struct {
-  const char *path_prefix;
-  ecewo__middleware_t handler;
-} GlobalMiddlewareEntry;
-
-void chain_start(ecewo_request_t *req, ecewo_response_t *res, MiddlewareInfo *middleware_info, ecewo__server_t *srv);
-void reset_middleware(ecewo__server_t *srv);
 
 #endif

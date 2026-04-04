@@ -19,8 +19,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "ecewo.h"
-#include "request.h"
+#include "server.h"
 
 #ifdef _WIN32
 #define strcasecmp _stricmp
@@ -128,4 +127,48 @@ void *ecewo_context_get(ecewo_request_t *req, const char *key) {
   }
 
   return NULL;
+}
+
+// ---------------------------------------------------------------------------
+// Request / response accessors
+// ---------------------------------------------------------------------------
+
+ecewo_app_t *ecewo_req_app(const ecewo_request_t *req) {
+  return req ? req->app : NULL;
+}
+
+ecewo_arena_t *ecewo_req_arena(const ecewo_request_t *req) {
+  return req ? req->arena : NULL;
+}
+
+const char *ecewo_req_method(const ecewo_request_t *req) {
+  return req ? req->method : NULL;
+}
+
+const char *ecewo_req_path(const ecewo_request_t *req) {
+  return req ? req->path : NULL;
+}
+
+const uint8_t *ecewo_req_body(const ecewo_request_t *req) {
+  return req ? req->body : NULL;
+}
+
+size_t ecewo_req_body_len(const ecewo_request_t *req) {
+  return req ? req->body_len : 0;
+}
+
+uint8_t ecewo_req_http_major(const ecewo_request_t *req) {
+  return req ? req->http_major : 0;
+}
+
+uint8_t ecewo_req_http_minor(const ecewo_request_t *req) {
+  return req ? req->http_minor : 0;
+}
+
+bool ecewo_req_is_head(const ecewo_request_t *req) {
+  return req ? req->is_head_request : false;
+}
+
+ecewo_arena_t *ecewo_res_arena(const ecewo_response_t *res) {
+  return res ? res->arena : NULL;
 }

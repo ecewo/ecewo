@@ -25,7 +25,7 @@
 #include "tester.h"
 
 void handler(ecewo_request_t *req, ecewo_response_t *res) {
-  ecewo_send_text(res, OK, req->path);
+  ecewo_send_text(res, ECEWO_OK, ecewo_req_path(req));
 }
 
 static int root_test(void) {

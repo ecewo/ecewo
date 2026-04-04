@@ -59,13 +59,13 @@ static void parallel_done(void *context) {
 
   if (ctx->completed == ctx->total && !ctx->has_error) {
     int sum = ctx->results[0] + ctx->results[1] + ctx->results[2];
-    char *response = ecewo_sprintf(ctx->res->arena, "{\"sum\":%d}", sum);
+    char *response = ecewo_sprintf(ecewo_res_arena(ctx->res), "{\"sum\":%d}", sum);
     ecewo_send_json(ctx->res, 200, response);
   }
 }
 
 void handler_parallel(ecewo_request_t *req, ecewo_response_t *res) {
-  parallel_ctx_t *ctx = ecewo_alloc(req->arena, sizeof(parallel_ctx_t));
+  parallel_ctx_t *ctx = ecewo_alloc(ecewo_req_arena(req), sizeof(parallel_ctx_t));
   ctx->res = res;
   ctx->total = 3;
   ctx->completed = 0;

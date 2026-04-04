@@ -30,16 +30,22 @@ struct ecewo__req_item_s {
   const char *value;
 };
 
+typedef struct ecewo__req_item_s ecewo__req_item_t;
+
 struct ecewo__req_s {
   struct ecewo__req_item_s *items;
   uint16_t count;
   uint16_t capacity;
 };
 
+typedef struct ecewo__req_s ecewo__req_t;
+
 struct ecewo__res_header_s {
   const char *name;
   const char *value;
 };
+
+typedef struct ecewo__res_header_s ecewo__res_header_t;
 
 typedef struct {
   char *key;
@@ -51,5 +57,7 @@ struct ecewo__req_ctx_s {
   uint32_t count;
   uint32_t capacity;
 };
+
+typedef struct ecewo__req_ctx_s ecewo__req_ctx_t;
 
 #endif

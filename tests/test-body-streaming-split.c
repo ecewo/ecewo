@@ -61,13 +61,13 @@ static void on_chunk(ecewo_request_t *req, const uint8_t *data, size_t len) {
 
 static void on_end(ecewo_request_t *req, ecewo_response_t *res) {
   SplitCtx *ctx = ecewo_context_get(req, "split_ctx");
-  char *body = ecewo_sprintf(req->arena, "chunks=%d,bytes=%zu",
+  char *body = ecewo_sprintf(ecewo_req_arena(req), "chunks=%d,bytes=%zu",
                              ctx->chunks_received, ctx->total_bytes);
-  ecewo_send_text(res, OK, body);
+  ecewo_send_text(res, ECEWO_OK, body);
 }
 
 static void handler(ecewo_request_t *req, ecewo_response_t *res) {
-  SplitCtx *ctx = ecewo_alloc(req->arena, sizeof(SplitCtx));
+  SplitCtx *ctx = ecewo_alloc(ecewo_req_arena(req), sizeof(SplitCtx));
   memset(ctx, 0, sizeof(SplitCtx));
   ecewo_context_set(req, "split_ctx", ctx);
   ecewo_body_on_data(req, on_chunk);

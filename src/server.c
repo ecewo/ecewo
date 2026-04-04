@@ -49,7 +49,7 @@ typedef enum {
 } server_error_t;
 
 typedef struct timer_data_s {
-  timer_callback_t callback;
+  ecewo_timer_cb_t callback;
   void *user_data;
   bool is_interval;
 } timer_data_t;
@@ -531,13 +531,13 @@ static void on_signal(uv_signal_t *handle, int signum) {
   uv_async_send(&srv->shutdown_async);
 }
 
-int ecewo_connection_takeover(ecewo_response_t *res, const TakeoverConfig *config) {
+int ecewo_connection_takeover(ecewo_response_t *res, const ecewo_takeover_config_t *config) {
   if (!res || !res->ecewo__client_socket || !config) {
     LOG_ERROR("connection_takeover: Invalid arguments");
     return -1;
   }
 
-  uv_tcp_t *handle = res->ecewo__client_socket;
+  uv_tcp_t *handle = (uv_tcp_t *)res->ecewo__client_socket;
   ecewo__client_t *client = (ecewo__client_t *)handle->data;
 
   if (!client) {
@@ -572,7 +572,7 @@ int ecewo_connection_takeover(ecewo_response_t *res, const TakeoverConfig *confi
   return 0;
 }
 
-uv_tcp_t *ecewo_get_client_handle(ecewo_response_t *res) {
+void *ecewo_get_client_handle(ecewo_response_t *res) {
   return res ? res->ecewo__client_socket : NULL;
 }
 
@@ -658,10 +658,14 @@ static void stop_request_timer(ecewo__client_t *client) {
 }
 
 int ecewo_timeout_request(ecewo_response_t *res, uint64_t timeout_ms) {
-  if (!res || !res->ecewo__client_socket || !res->ecewo__client_socket->data)
+  if (!res || !res->ecewo__client_socket)
     return -1;
 
-  ecewo__client_t *client = (ecewo__client_t *)res->ecewo__client_socket->data;
+  uv_tcp_t *sock = (uv_tcp_t *)res->ecewo__client_socket;
+  if (!sock->data)
+    return -1;
+
+  ecewo__client_t *client = (ecewo__client_t *)sock->data;
 
   if (!client || client->closing || !client->srv)
     return -1;
@@ -1075,7 +1079,7 @@ void ecewo_listen(ecewo_app_t *app, uint16_t port) {
   ecewo_run(app);
 }
 
-void ecewo_atexit(ecewo_app_t *app, shutdown_callback_t callback) {
+void ecewo_atexit(ecewo_app_t *app, ecewo_shutdown_cb_t callback) {
   if (app && app->server)
     app->server->shutdown_callback = callback;
 }
@@ -1095,7 +1099,7 @@ int server_pending_async_work(ecewo_app_t *app) {
                                    memory_order_acquire);
 }
 
-uv_loop_t *ecewo_get_loop(void) {
+void *ecewo_get_loop(void) {
   return ecewo_server ? ecewo_server->loop : NULL;
 }
 
@@ -1112,11 +1116,11 @@ static void timer_callback(uv_timer_t *handle) {
   }
 }
 
-ecewo_timer_t *ecewo_timeout(timer_callback_t callback, uint64_t delay_ms, void *user_data) {
+ecewo_timer_t *ecewo_timeout(ecewo_timer_cb_t callback, uint64_t delay_ms, void *user_data) {
   if (!ecewo_server || !ecewo_server->initialized || !callback)
     return NULL;
 
-  ecewo_timer_t *timer = malloc(sizeof(ecewo_timer_t));
+  uv_timer_t *timer = malloc(sizeof(uv_timer_t));
   timer_data_t *data = malloc(sizeof(timer_data_t));
 
   if (!timer || !data) {
@@ -1143,14 +1147,14 @@ ecewo_timer_t *ecewo_timeout(timer_callback_t callback, uint64_t delay_ms, void 
     return NULL;
   }
 
-  return timer;
+  return (ecewo_timer_t *)timer;
 }
 
-ecewo_timer_t *ecewo_interval(timer_callback_t callback, uint64_t interval_ms, void *user_data) {
+ecewo_timer_t *ecewo_interval(ecewo_timer_cb_t callback, uint64_t interval_ms, void *user_data) {
   if (!ecewo_server || !ecewo_server->initialized || !callback)
     return NULL;
 
-  ecewo_timer_t *timer = malloc(sizeof(ecewo_timer_t));
+  uv_timer_t *timer = malloc(sizeof(uv_timer_t));
   timer_data_t *data = malloc(sizeof(timer_data_t));
 
   if (!timer || !data) {
@@ -1177,13 +1181,14 @@ ecewo_timer_t *ecewo_interval(timer_callback_t callback, uint64_t interval_ms, v
     return NULL;
   }
 
-  return timer;
+  return (ecewo_timer_t *)timer;
 }
 
-void ecewo_clear_timer(ecewo_timer_t *timer) {
-  if (!timer)
+void ecewo_clear_timer(ecewo_timer_t *handle) {
+  if (!handle)
     return;
 
+  uv_timer_t *timer = (uv_timer_t *)handle;
   uv_timer_stop(timer);
 
   timer_data_t *data = (timer_data_t *)timer->data;
@@ -1209,3 +1214,14 @@ bool ecewo_client_is_valid(void *ecewo__client_socket_data) {
 
   return true;
 }
+
+// ---------------------------------------------------------------------------
+// App configuration setters
+// ---------------------------------------------------------------------------
+
+void ecewo_set_max_connections(ecewo_app_t *app, int val) { if (app) app->max_connections = val; }
+void ecewo_set_listen_backlog(ecewo_app_t *app, int val) { if (app) app->listen_backlog = val; }
+void ecewo_set_idle_timeout(ecewo_app_t *app, uint64_t ms) { if (app) app->idle_timeout_ms = ms; }
+void ecewo_set_request_timeout(ecewo_app_t *app, uint64_t ms) { if (app) app->request_timeout_ms = ms; }
+void ecewo_set_cleanup_interval(ecewo_app_t *app, uint64_t ms) { if (app) app->cleanup_interval_ms = ms; }
+void ecewo_set_shutdown_timeout(ecewo_app_t *app, uint64_t ms) { if (app) app->shutdown_timeout_ms = ms; }

@@ -42,8 +42,8 @@ typedef struct {
   ecewo_request_t *req;
   ecewo_response_t *res;
   ecewo__client_t *client;
-  BodyDataCb on_data;
-  BodyEndCb on_end;
+  ecewo_body_data_cb_t on_data;
+  ecewo_body_end_cb_t on_end;
   size_t max_size;
   size_t bytes_received;
   bool streaming_enabled;
@@ -72,7 +72,7 @@ static StreamCtx *get_or_create_ctx(ecewo_request_t *req) {
   ctx->max_size = BODY_MAX_SIZE;
 
   if (req->ecewo__client_socket)
-    ctx->client = (ecewo__client_t *)req->ecewo__client_socket->data;
+    ctx->client = (ecewo__client_t *)((uv_tcp_t *)req->ecewo__client_socket)->data;
 
   ecewo_context_set(req, "_body_stream", ctx);
   return ctx;
@@ -107,7 +107,7 @@ void ecewo_body_stream(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t
 
   StreamCtx *ctx = get_or_create_ctx(req);
   if (!ctx) {
-    ecewo_send_text(res, INTERNAL_SERVER_ERROR, "Internal server error");
+    ecewo_send_text(res, ECEWO_INTERNAL_SERVER_ERROR, "Internal server error");
     return;
   }
 
@@ -124,7 +124,7 @@ void ecewo_body_stream(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t
   next(req, res);
 }
 
-void ecewo_body_on_data(ecewo_request_t *req, BodyDataCb callback) {
+void ecewo_body_on_data(ecewo_request_t *req, ecewo_body_data_cb_t callback) {
   if (!req || !callback)
     return;
 
@@ -140,7 +140,7 @@ void ecewo_body_on_data(ecewo_request_t *req, BodyDataCb callback) {
   ctx->on_data = callback;
 }
 
-void ecewo_body_on_end(ecewo_request_t *req, ecewo_response_t *res, BodyEndCb callback) {
+void ecewo_body_on_end(ecewo_request_t *req, ecewo_response_t *res, ecewo_body_end_cb_t callback) {
   if (!req || !res || !callback)
     return;
 
