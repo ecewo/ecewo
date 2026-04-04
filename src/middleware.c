@@ -27,8 +27,8 @@
 #include "logger.h"
 
 typedef struct {
-  ecewo__middleware_t *handlers;
-  ecewo__handler_t route_handler;
+  ecewo_middleware_t *handlers;
+  ecewo_handler_t route_handler;
   uint16_t count;
   uint16_t current;
 } Chain;
@@ -60,7 +60,7 @@ static void execute_next(ecewo_request_t *req, ecewo_response_t *res) {
   }
 
   if (chain->current < chain->count) {
-    ecewo__middleware_t mw = chain->handlers[chain->current++];
+    ecewo_middleware_t mw = chain->handlers[chain->current++];
     mw(req, res, execute_next);
   } else {
     if (chain->route_handler)
@@ -88,7 +88,7 @@ void chain_start(ecewo_request_t *req, ecewo_response_t *res, MiddlewareInfo *mi
     return;
   }
 
-  ecewo__middleware_t *combined_handlers = ecewo_alloc(req->arena, sizeof(ecewo__middleware_t) * total_middleware_count);
+  ecewo_middleware_t *combined_handlers = ecewo_alloc(req->arena, sizeof(ecewo_middleware_t) * total_middleware_count);
 
   if (!combined_handlers) {
     LOG_ERROR("Arena allocation failed for middleware handlers.");
@@ -108,7 +108,7 @@ void chain_start(ecewo_request_t *req, ecewo_response_t *res, MiddlewareInfo *mi
   if (middleware_info->middleware_count > 0 && middleware_info->middleware) {
     memcpy(combined_handlers + idx,
            middleware_info->middleware,
-           sizeof(ecewo__middleware_t) * middleware_info->middleware_count);
+           sizeof(ecewo_middleware_t) * middleware_info->middleware_count);
   }
 
   Chain *chain = ecewo_alloc(req->arena, sizeof(Chain));
@@ -128,14 +128,14 @@ void chain_start(ecewo_request_t *req, ecewo_response_t *res, MiddlewareInfo *mi
   execute_next(req, res);
 }
 
-void ecewo__register_use(ecewo_app_t *app, const char *path, ecewo__middleware_t middleware_handler) {
+void ecewo_use(ecewo_app_t *app, const char *path, ecewo_middleware_t middleware_handler) {
   if (!middleware_handler) {
     LOG_ERROR("NULL middleware handler");
     abort();
   }
 
   if (!app || !app->server) {
-    LOG_ERROR("NULL app in ecewo__register_use");
+    LOG_ERROR("NULL app in ecewo_use");
     abort();
   }
 

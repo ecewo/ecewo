@@ -96,12 +96,12 @@ typedef struct route_node {
   rax *children;
   struct route_node *param_child;
 
-  ecewo__handler_t handlers[METHOD_COUNT];
+  ecewo_handler_t handlers[METHOD_COUNT];
   void *middleware_ctx[METHOD_COUNT];
   char **route_param_names[METHOD_COUNT];
   uint8_t route_param_count[METHOD_COUNT];
 
-  ecewo__handler_t wildcard_handlers[METHOD_COUNT];
+  ecewo_handler_t wildcard_handlers[METHOD_COUNT];
   void *wildcard_middleware_ctx[METHOD_COUNT];
   char **wildcard_param_names[METHOD_COUNT];
   uint8_t wildcard_param_count[METHOD_COUNT];
@@ -495,7 +495,7 @@ route_table_t *route_table_create(void) {
 int route_table_add(route_table_t *table,
                     llhttp_method_t method,
                     const char *path,
-                    ecewo__handler_t handler,
+                    ecewo_handler_t handler,
                     void *middleware_ctx) {
   if (!table || !path || !handler)
     return -1;

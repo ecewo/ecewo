@@ -133,7 +133,7 @@ struct ecewo__client_s {
   atomic_int refcount;
   bool valid;
 
-  ecewo__handler_t pending_handler;
+  ecewo_handler_t pending_handler;
   void *pending_mw;
   bool handler_pending;
   ecewo_request_t *pending_req;

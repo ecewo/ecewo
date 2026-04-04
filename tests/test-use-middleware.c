@@ -89,8 +89,8 @@ int test_path_use_skipped_for_nonmatching(void) {
 }
 
 static void setup_routes(ecewo_app_t *app) {
-  ECEWO_USE(app, global_tag_mw);
-  ECEWO_USE(app, "/use-api", api_tag_mw);
+  ecewo_use(app, NULL, global_tag_mw);
+  ecewo_use(app, "/use-api", api_tag_mw);
 
   ECEWO_GET(app, "/use-public", tag_handler);
   ECEWO_GET(app, "/use-api", tag_handler);

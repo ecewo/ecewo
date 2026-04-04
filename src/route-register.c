@@ -43,10 +43,10 @@ static void register_route_n(ecewo_app_t *app, const char *path,
   }
 
   int mw_count = count - 1;
-  ecewo__middleware_t *mw = NULL;
+  ecewo_middleware_t *mw = NULL;
 
   if (mw_count > 0) {
-    mw = ecewo_alloc(app->arena, sizeof(ecewo__middleware_t) * mw_count);
+    mw = ecewo_alloc(app->arena, sizeof(ecewo_middleware_t) * mw_count);
     if (!mw) {
       LOG_ERROR("Middleware allocation failed");
       return;
@@ -57,11 +57,11 @@ static void register_route_n(ecewo_app_t *app, const char *path,
         LOG_ERROR("NULL middleware handler at index %d", i);
         return;
       }
-      mw[i] = (ecewo__middleware_t)fns[i];
+      mw[i] = (ecewo_middleware_t)fns[i];
     }
   }
 
-  ecewo__handler_t handler = (ecewo__handler_t)fns[count - 1];
+  ecewo_handler_t handler = (ecewo_handler_t)fns[count - 1];
   if (!handler) {
     LOG_ERROR("NULL handler in route registration");
     return;

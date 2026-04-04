@@ -54,7 +54,7 @@ typedef struct {
 } param_match_t;
 
 typedef struct {
-  ecewo__handler_t handler;
+  ecewo_handler_t handler;
   void *middleware_ctx;
   param_match_t inline_params[MAX_INLINE_PARAMS];
   param_match_t *params;
@@ -74,7 +74,7 @@ uint8_t route_table_allowed_methods(route_table_t *table,
 int route_table_add(route_table_t *table,
                     llhttp_method_t method,
                     const char *path,
-                    ecewo__handler_t handler,
+                    ecewo_handler_t handler,
                     void *middleware_ctx);
 
 int tokenize_path(ecewo_arena_t *arena, const char *path, size_t path_len, tokenized_path_t *result);

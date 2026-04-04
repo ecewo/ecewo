@@ -32,14 +32,14 @@ typedef struct ecewo__server_s ecewo__server_t;
 #endif
 
 typedef struct MiddlewareInfo {
-  ecewo__middleware_t *middleware;
+  ecewo_middleware_t *middleware;
   uint16_t middleware_count;
-  ecewo__handler_t handler;
+  ecewo_handler_t handler;
 } MiddlewareInfo;
 
 typedef struct {
   const char *path_prefix;
-  ecewo__middleware_t handler;
+  ecewo_middleware_t handler;
 } GlobalMiddlewareEntry;
 
 void chain_start(ecewo_request_t *req, ecewo_response_t *res, MiddlewareInfo *middleware_info, ecewo__server_t *srv);

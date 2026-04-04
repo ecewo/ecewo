@@ -136,10 +136,10 @@ typedef enum {
 typedef void (*ecewo_next_t)(ecewo_request_t *, ecewo_response_t *);
 
 /** Signature for a route handler: receives the request and response, sends exactly one reply. */
-typedef void (*ecewo__handler_t)(ecewo_request_t *req, ecewo_response_t *res);
+typedef void (*ecewo_handler_t)(ecewo_request_t *req, ecewo_response_t *res);
 
 /** Signature for middleware: receives `req`, `res`, and `next()`. Call `next()` to pass control downstream. */
-typedef void (*ecewo__middleware_t)(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next);
+typedef void (*ecewo_middleware_t)(ecewo_request_t *req, ecewo_response_t *res, ecewo_next_t next);
 
 /** Callback invoked by `ecewo_atexit()` during graceful shutdown, before the event loop exits. */
 typedef void (*ecewo_shutdown_cb_t)(void);
@@ -310,30 +310,17 @@ ECEWO_EXPORT void ecewo_set_shutdown_timeout(ecewo_app_t *app, uint64_t ms);
 // MIDDLEWARE REGISTRATION
 // ---------------------------------------------------------------------------
 
-// Internal function, do not use it
-ECEWO_EXPORT void ecewo__register_use(ecewo_app_t *app, const char *path, ecewo__middleware_t middleware_handler);
-
-// Internal macro, do not use it
-#define ECEWO__GLOBAL_MIDDLEWARE_BUILD(_1, _2, NAME, ...) NAME
-// Internal macro, do not use it
-#define ECEWO__GLOBAL_MIDDLEWARE(app, fn) ecewo__register_use(app, NULL, fn)
-// Internal macro, do not use it
-#define ECEWO__GLOBAL_MIDDLEWARE_PATH(app, path, fn) ecewo__register_use(app, path, fn)
-
 /**
- * Register a middleware function.
+ * Register a global middleware function.
  *
- * Two-argument form:   ECEWO_USE(app, fn)
- *   fn runs for every incoming request regardless of path.
- *
- * Three-argument form: ECEWO_USE(app, "/prefix", fn)
- *   fn runs only when the request path starts with "/prefix".
+ * When `path` is `NULL`, `fn` runs for every incoming request regardless of path.
+ * When `path` is non-`NULL`, `fn` runs only when the request path starts with that prefix.
  *
  * Middleware is executed in registration order before the route handler.
- * The middleware must call next(req, res) to continue the chain, or send
- * a response itself to short-circuit further processing.
+ * `fn` must call `next(req, res)` to continue the chain, or send a response
+ * itself to short-circuit further processing.
  */
-#define ECEWO_USE(app, ...) ECEWO__GLOBAL_MIDDLEWARE_BUILD(__VA_ARGS__, ECEWO__GLOBAL_MIDDLEWARE_PATH, ECEWO__GLOBAL_MIDDLEWARE)(app, __VA_ARGS__)
+ECEWO_EXPORT void ecewo_use(ecewo_app_t *app, const char *path, ecewo_middleware_t fn);
 
 // ---------------------------------------------------------------------------
 // ROUTE REGISTRATION
