@@ -360,38 +360,52 @@ ECEWO_EXPORT void ecewo__register_options_n(ecewo_app_t *app, const char *path, 
  * Routes are matched in registration order; the first match wins.
  */
 #define ECEWO_GET(app, path, ...) \
-  ecewo__register_get_n(app, path, (void *[]){__VA_ARGS__}, \
-    (int)(sizeof((void *[]){__VA_ARGS__}) / sizeof(void *)))
+  do { \
+    void *fns[] = { __VA_ARGS__ }; \
+    ecewo__register_get_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+  } while(0)
 
 /** Register a POST route. See ECEWO_GET for full documentation. */
 #define ECEWO_POST(app, path, ...) \
-  ecewo__register_post_n(app, path, (void *[]){__VA_ARGS__}, \
-    (int)(sizeof((void *[]){__VA_ARGS__}) / sizeof(void *)))
+  do { \
+    void *fns[] = { __VA_ARGS__ }; \
+    ecewo__register_post_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+  } while(0)
 
 /** Register a PUT route. See ECEWO_GET for full documentation. */
 #define ECEWO_PUT(app, path, ...) \
-  ecewo__register_put_n(app, path, (void *[]){__VA_ARGS__}, \
-    (int)(sizeof((void *[]){__VA_ARGS__}) / sizeof(void *)))
+  do { \
+    void *fns[] = { __VA_ARGS__ }; \
+    ecewo__register_put_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+  } while(0)
 
 /** Register a PATCH route. See ECEWO_GET for full documentation. */
 #define ECEWO_PATCH(app, path, ...) \
-  ecewo__register_patch_n(app, path, (void *[]){__VA_ARGS__}, \
-    (int)(sizeof((void *[]){__VA_ARGS__}) / sizeof(void *)))
+  do { \
+    void *fns[] = { __VA_ARGS__ }; \
+    ecewo__register_patch_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+  } while(0)
 
 /** Register a DELETE route. See ECEWO_GET for full documentation. */
 #define ECEWO_DELETE(app, path, ...) \
-  ecewo__register_delete_n(app, path, (void *[]){__VA_ARGS__}, \
-    (int)(sizeof((void *[]){__VA_ARGS__}) / sizeof(void *)))
+  do { \
+    void *fns[] = { __VA_ARGS__ }; \
+    ecewo__register_delete_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+  } while(0)
 
 /** Register a HEAD route. ecewo automatically suppresses the body in the response. See ECEWO_GET. */
 #define ECEWO_HEAD(app, path, ...) \
-  ecewo__register_head_n(app, path, (void *[]){__VA_ARGS__}, \
-    (int)(sizeof((void *[]){__VA_ARGS__}) / sizeof(void *)))
+  do { \
+    void *fns[] = { __VA_ARGS__ }; \
+    ecewo__register_head_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+  } while(0)
 
 /** Register an OPTIONS route. See ECEWO_GET for full documentation. */
 #define ECEWO_OPTIONS(app, path, ...) \
-  ecewo__register_options_n(app, path, (void *[]){__VA_ARGS__}, \
-    (int)(sizeof((void *[]){__VA_ARGS__}) / sizeof(void *)))
+  do { \
+    void *fns[] = { __VA_ARGS__ }; \
+    ecewo__register_options_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+  } while(0)
 
 // ---------------------------------------------------------------------------
 // PER-REQUEST CONTEXT
