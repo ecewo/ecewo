@@ -25,8 +25,8 @@
 #include "logger.h"
 
 // Array-based registration: fns = [mw0, mw1, ..., handler], count = total elements.
-static void register_route_n(ecewo_app_t *app, const char *path,
-                              int method_enum, void **fns, int count) {
+static void register_route(ecewo_app_t *app, const char *path,
+                           int method_enum, void **fns, int count) {
   if (!app || !app->server || !app->arena) {
     LOG_ERROR("NULL app in route registration");
     return;
@@ -82,15 +82,15 @@ static void register_route_n(ecewo_app_t *app, const char *path,
     LOG_ERROR("Failed to add route: %s", path);
 }
 
-#define ROUTE_REGISTER_N(func_name, method_enum)                                          \
-  void func_name(ecewo_app_t *app, const char *path, void **fns, int count) {            \
-    register_route_n(app, path, method_enum, fns, count);                                \
+#define ROUTE_REGISTER(func_name, method_enum) \
+  void func_name(ecewo_app_t *app, const char *path, void **fns, int count) { \
+    register_route(app, path, method_enum, fns, count); \
   }
 
-ROUTE_REGISTER_N(ecewo__register_get_n, HTTP_GET)
-ROUTE_REGISTER_N(ecewo__register_post_n, HTTP_POST)
-ROUTE_REGISTER_N(ecewo__register_put_n, HTTP_PUT)
-ROUTE_REGISTER_N(ecewo__register_patch_n, HTTP_PATCH)
-ROUTE_REGISTER_N(ecewo__register_delete_n, HTTP_DELETE)
-ROUTE_REGISTER_N(ecewo__register_head_n, HTTP_HEAD)
-ROUTE_REGISTER_N(ecewo__register_options_n, HTTP_OPTIONS)
+ROUTE_REGISTER(ecewo_get, HTTP_GET)
+ROUTE_REGISTER(ecewo_post, HTTP_POST)
+ROUTE_REGISTER(ecewo_put, HTTP_PUT)
+ROUTE_REGISTER(ecewo_patch, HTTP_PATCH)
+ROUTE_REGISTER(ecewo_delete, HTTP_DELETE)
+ROUTE_REGISTER(ecewo_head, HTTP_HEAD)
+ROUTE_REGISTER(ecewo_options, HTTP_OPTIONS)

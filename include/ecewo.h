@@ -337,13 +337,13 @@ typedef enum {
 // Internal functions - do not call directly; use ECEWO_GET / ECEWO_POST / etc. macros instead.
 // fns is an array of function pointers: [middleware0, middleware1, ..., handler].
 // count is the total number of elements (middleware count + 1 for the handler).
-ECEWO_EXPORT void ecewo__register_get_n(ecewo_app_t *app, const char *path, void **fns, int count);
-ECEWO_EXPORT void ecewo__register_post_n(ecewo_app_t *app, const char *path, void **fns, int count);
-ECEWO_EXPORT void ecewo__register_put_n(ecewo_app_t *app, const char *path, void **fns, int count);
-ECEWO_EXPORT void ecewo__register_patch_n(ecewo_app_t *app, const char *path, void **fns, int count);
-ECEWO_EXPORT void ecewo__register_delete_n(ecewo_app_t *app, const char *path, void **fns, int count);
-ECEWO_EXPORT void ecewo__register_head_n(ecewo_app_t *app, const char *path, void **fns, int count);
-ECEWO_EXPORT void ecewo__register_options_n(ecewo_app_t *app, const char *path, void **fns, int count);
+ECEWO_EXPORT void ecewo_get(ecewo_app_t *app, const char *path, void **fns, int count);
+ECEWO_EXPORT void ecewo_post(ecewo_app_t *app, const char *path, void **fns, int count);
+ECEWO_EXPORT void ecewo_put(ecewo_app_t *app, const char *path, void **fns, int count);
+ECEWO_EXPORT void ecewo_patch(ecewo_app_t *app, const char *path, void **fns, int count);
+ECEWO_EXPORT void ecewo_delete(ecewo_app_t *app, const char *path, void **fns, int count);
+ECEWO_EXPORT void ecewo_head(ecewo_app_t *app, const char *path, void **fns, int count);
+ECEWO_EXPORT void ecewo_options(ecewo_app_t *app, const char *path, void **fns, int count);
 
 /**
  * Register a route handler for the given HTTP method and path.
@@ -362,49 +362,49 @@ ECEWO_EXPORT void ecewo__register_options_n(ecewo_app_t *app, const char *path, 
 #define ECEWO_GET(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo__register_get_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_get(app, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a POST route. See ECEWO_GET for full documentation. */
 #define ECEWO_POST(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo__register_post_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_post(app, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a PUT route. See ECEWO_GET for full documentation. */
 #define ECEWO_PUT(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo__register_put_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_put(app, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a PATCH route. See ECEWO_GET for full documentation. */
 #define ECEWO_PATCH(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo__register_patch_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_patch(app, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a DELETE route. See ECEWO_GET for full documentation. */
 #define ECEWO_DELETE(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo__register_delete_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_delete(app, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a HEAD route. ecewo automatically suppresses the body in the response. See ECEWO_GET. */
 #define ECEWO_HEAD(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo__register_head_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_head(app, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register an OPTIONS route. See ECEWO_GET for full documentation. */
 #define ECEWO_OPTIONS(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo__register_options_n(app, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_options(app, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 // ---------------------------------------------------------------------------
