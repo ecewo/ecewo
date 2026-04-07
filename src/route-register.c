@@ -24,73 +24,132 @@
 #include "middleware.h"
 #include "logger.h"
 
-// Array-based registration: fns = [mw0, mw1, ..., handler], count = total elements.
-static void register_route(ecewo_app_t *app, const char *path,
-                           int method_enum, void **fns, int count) {
+typedef struct mw_node_s {
+  ecewo_middleware_t fn;
+  struct mw_node_s *next;
+} mw_node_t;
+
+struct ecewo_route_s {
+  ecewo_app_t *app;
+  ecewo_method_t method;
+  const char *path;
+  mw_node_t *mw_head;
+  mw_node_t *mw_tail;
+  int mw_count;
+  bool committed;
+};
+
+ecewo_route_t *ecewo_route_new(ecewo_app_t *app, ecewo_method_t method, const char *path) {
   if (!app || !app->server || !app->arena) {
-    LOG_ERROR("NULL app in route registration");
-    return;
+    LOG_ERROR("NULL app in ecewo_route_new");
+    return NULL;
   }
-
   if (!path) {
-    LOG_ERROR("NULL path in route registration");
+    LOG_ERROR("NULL path in ecewo_route_new");
+    return NULL;
+  }
+
+  ecewo_route_t *r = ecewo_alloc(app->arena, sizeof(ecewo_route_t));
+  if (!r) {
+    LOG_ERROR("Allocation failed in ecewo_route_new");
+    return NULL;
+  }
+  memset(r, 0, sizeof(ecewo_route_t));
+  r->app = app;
+  r->method = method;
+  r->path = path;
+  return r;
+}
+
+void ecewo_route_middleware(ecewo_route_t *route, ecewo_middleware_t fn) {
+  if (!route) {
+    LOG_ERROR("NULL route in ecewo_route_middleware");
+    return;
+  }
+  if (route->committed) {
+    LOG_ERROR("ecewo_route_middleware called after ecewo_route_handler");
+    return;
+  }
+  if (!fn) {
+    LOG_ERROR("NULL middleware in ecewo_route_middleware");
     return;
   }
 
-  if (!fns || count < 1) {
-    LOG_ERROR("No handler provided in route registration");
+  mw_node_t *node = ecewo_alloc(route->app->arena, sizeof(mw_node_t));
+  if (!node) {
+    LOG_ERROR("Allocation failed in ecewo_route_middleware");
+    return;
+  }
+  node->fn = fn;
+  node->next = NULL;
+
+  if (!route->mw_tail) {
+    route->mw_head = node;
+    route->mw_tail = node;
+  } else {
+    route->mw_tail->next = node;
+    route->mw_tail = node;
+  }
+  route->mw_count++;
+}
+
+void ecewo_route_handler(ecewo_route_t *route, ecewo_handler_t handler) {
+  if (!route) {
+    LOG_ERROR("NULL route in ecewo_route_handler");
+    return;
+  }
+  if (route->committed) {
+    LOG_ERROR("ecewo_route_handler called twice on the same route");
+    return;
+  }
+  if (!handler) {
+    LOG_ERROR("NULL handler in ecewo_route_handler");
     return;
   }
 
-  int mw_count = count - 1;
+  route->committed = true;
+
   ecewo_middleware_t *mw = NULL;
-
-  if (mw_count > 0) {
-    mw = ecewo_alloc(app->arena, sizeof(ecewo_middleware_t) * mw_count);
+  if (route->mw_count > 0) {
+    mw = ecewo_alloc(route->app->arena, sizeof(ecewo_middleware_t) * route->mw_count);
     if (!mw) {
-      LOG_ERROR("Middleware allocation failed");
+      LOG_ERROR("Middleware allocation failed in ecewo_route_handler");
       return;
     }
 
-    for (int i = 0; i < mw_count; i++) {
-      if (!fns[i]) {
-        LOG_ERROR("NULL middleware handler at index %d", i);
-        return;
-      }
-      mw[i] = (ecewo_middleware_t)fns[i];
-    }
+    int i = 0;
+    for (mw_node_t *n = route->mw_head; n; n = n->next)
+      mw[i++] = n->fn;
   }
 
-  ecewo_handler_t handler = (ecewo_handler_t)fns[count - 1];
-  if (!handler) {
-    LOG_ERROR("NULL handler in route registration");
-    return;
-  }
-
-  MiddlewareInfo *info = ecewo_alloc(app->arena, sizeof(MiddlewareInfo));
+  MiddlewareInfo *info = ecewo_alloc(route->app->arena, sizeof(MiddlewareInfo));
   if (!info)
     return;
   memset(info, 0, sizeof(MiddlewareInfo));
 
   info->handler = handler;
-  info->middleware_count = mw_count;
+  info->middleware_count = (uint16_t)route->mw_count;
   info->middleware = mw;
 
-  int result = route_table_add(app->server->route_table,
-                               method_enum, path, handler, info);
+  int result = route_table_add(route->app->server->route_table,
+                               (llhttp_method_t)route->method,
+                               route->path, handler, info);
   if (result != 0)
-    LOG_ERROR("Failed to add route: %s", path);
+    LOG_ERROR("Failed to add route: %s", route->path);
 }
 
-#define ROUTE_REGISTER(func_name, method_enum) \
-  void func_name(ecewo_app_t *app, const char *path, void **fns, int count) { \
-    register_route(app, path, method_enum, fns, count); \
+// Internal helper used by the ECEWO_GET/POST/... macros
+// fns = [mw0, mw1, ..., handler], count = total elements
+void ecewo_route_register(ecewo_app_t *app, ecewo_method_t method,
+                          const char *path, void **fns, int count) {
+  if (!fns || count < 1) {
+    LOG_ERROR("No handler provided in route registration");
+    return;
   }
-
-ROUTE_REGISTER(ecewo_get, HTTP_GET)
-ROUTE_REGISTER(ecewo_post, HTTP_POST)
-ROUTE_REGISTER(ecewo_put, HTTP_PUT)
-ROUTE_REGISTER(ecewo_patch, HTTP_PATCH)
-ROUTE_REGISTER(ecewo_delete, HTTP_DELETE)
-ROUTE_REGISTER(ecewo_head, HTTP_HEAD)
-ROUTE_REGISTER(ecewo_options, HTTP_OPTIONS)
+  ecewo_route_t *r = ecewo_route_new(app, method, path);
+  if (!r)
+    return;
+  for (int i = 0; i < count - 1; i++)
+    ecewo_route_middleware(r, (ecewo_middleware_t)fns[i]);
+  ecewo_route_handler(r, (ecewo_handler_t)fns[count - 1]);
+}
