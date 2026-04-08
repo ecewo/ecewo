@@ -20,7 +20,6 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "arena-internal.h"
-#include "uv.h"
 #include "logger.h"
 #include <stdlib.h>
 #include <stdint.h>
@@ -55,8 +54,6 @@ typedef struct {
   uint16_t grow_count;
   uint16_t shrink_count;
 #endif
-  // TODO: Find a way to enable mutex only when it's needed
-  uv_mutex_t mutex;
   bool initialized;
 } arena_pool_t;
 
@@ -64,8 +61,6 @@ static arena_pool_t arena_pool = { 0 };
 
 // Called when acquiring
 static void arena_pool_try_grow(void) {
-  // Already at mutex lock when called
-
   if (arena_pool.head > ARENA_POOL_LOW_WATERMARK)
     return;
 
@@ -110,8 +105,6 @@ static void arena_pool_try_grow(void) {
 
 // Called when releasing
 static void arena_pool_try_shrink(void) {
-  // Already at mutex lock when called
-
   if (arena_pool.head < ARENA_POOL_HIGH_WATERMARK)
     return;
 
@@ -202,11 +195,6 @@ void arena_pool_init(void) {
   arena_pool.shrink_count = 0;
 #endif
 
-  if (uv_mutex_init(&arena_pool.mutex) != 0) {
-    LOG_ERROR("Failed to initialize arena pool mutex");
-    abort();
-  }
-
   const uint16_t preallocate = get_arena_preallocation();
 
 // Pre-allocate arenas
@@ -253,8 +241,6 @@ void arena_pool_destroy(void) {
   if (!arena_pool.initialized)
     return;
 
-  uv_mutex_lock(&arena_pool.mutex);
-
 #ifdef ECEWO_DEBUG
   // Statistics before destruction
   if (arena_pool.grow_count > 0 || arena_pool.shrink_count > 0) {
@@ -277,15 +263,10 @@ void arena_pool_destroy(void) {
   arena_pool.head = 0;
   arena_pool.initialized = false;
 
-  uv_mutex_unlock(&arena_pool.mutex);
-  uv_mutex_destroy(&arena_pool.mutex);
-
   LOG_DEBUG("Arena pool destroyed");
 }
 
 ecewo_arena_t *ecewo_arena_borrow(void) {
-  uv_mutex_lock(&arena_pool.mutex);
-
   ecewo_arena_t *arena;
 
   if (arena_pool.head > 0) {
@@ -293,17 +274,13 @@ ecewo_arena_t *ecewo_arena_borrow(void) {
     arena = arena_pool.arenas[--arena_pool.head];
     arena_pool.arenas[arena_pool.head] = NULL;
 
-    // Update peak usage
 #ifdef ECEWO_DEBUG
     int in_use = arena_pool.total_allocated - arena_pool.head;
     if (in_use > arena_pool.peak_usage)
       arena_pool.peak_usage = in_use;
 #endif
 
-    // Try to grow if running low
     arena_pool_try_grow();
-
-    uv_mutex_unlock(&arena_pool.mutex);
     arena_reset(arena);
     return arena;
   }
@@ -311,20 +288,16 @@ ecewo_arena_t *ecewo_arena_borrow(void) {
   // Pool is empty, check if we can grow
   if (arena_pool.total_allocated >= ARENA_POOL_CAP) {
     LOG_DEBUG("Arena pool exhausted! (max %d reached)", ARENA_POOL_CAP);
-    uv_mutex_unlock(&arena_pool.mutex);
     return NULL;
   }
 
   // Allocate new arena
   arena = malloc(sizeof(ecewo_arena_t));
-  if (!arena) {
-    uv_mutex_unlock(&arena_pool.mutex);
+  if (!arena)
     return NULL;
-  }
 
   if (!new_region_to(&arena->begin, &arena->end, ARENA_REGION_SIZE)) {
     free(arena);
-    uv_mutex_unlock(&arena_pool.mutex);
     return NULL;
   }
 
@@ -339,7 +312,6 @@ ecewo_arena_t *ecewo_arena_borrow(void) {
             arena_pool.total_allocated, ARENA_POOL_CAP);
 #endif
 
-  uv_mutex_unlock(&arena_pool.mutex);
   return arena;
 }
 
@@ -371,19 +343,11 @@ void ecewo_arena_return(ecewo_arena_t *arena) {
     arena->end = arena->begin;
   }
 
-  uv_mutex_lock(&arena_pool.mutex);
-
   if (arena_pool.head < ARENA_POOL_CAP) {
-    // Return to pool
     arena_pool.arenas[arena_pool.head++] = arena;
-
-    // Try to shrink if too many available
     arena_pool_try_shrink();
-
-    uv_mutex_unlock(&arena_pool.mutex);
   } else {
-    // Pool is full, free
-    uv_mutex_unlock(&arena_pool.mutex);
+    // Pool is full, free directly
     ecewo_free(arena);
     free(arena);
   }
@@ -395,8 +359,6 @@ void ecewo_arena_pool_stats(void) {
     LOG_DEBUG("Arena pool not initialized");
     return;
   }
-
-  uv_mutex_lock(&arena_pool.mutex);
 
   uint16_t available = arena_pool.head;
   uint16_t in_use = arena_pool.total_allocated - available;
@@ -411,8 +373,6 @@ void ecewo_arena_pool_stats(void) {
   LOG_DEBUG("  Total allocated: %.2f MB", total_mb);
   LOG_DEBUG("  Grow operations: %d", arena_pool.grow_count);
   LOG_DEBUG("  Shrink operations: %d", arena_pool.shrink_count);
-
-  uv_mutex_unlock(&arena_pool.mutex);
 }
 
 #endif
