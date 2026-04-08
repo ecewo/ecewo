@@ -126,6 +126,7 @@ void send_error(ecewo_arena_t *arena, uv_tcp_t *ecewo__client_socket, int error_
   size_t body_len = strlen(body);
 
   size_t response_size = 512;
+  // Freed in write_completion_cb after the async write finishes
   char *response = malloc(response_size);
 
   if (!response) {
@@ -155,6 +156,7 @@ void send_error(ecewo_arena_t *arena, uv_tcp_t *ecewo__client_socket, int error_
     return;
   }
 
+  // Freed in write_completion_cb after the async write finishes
   write_req_t *write_req = malloc(sizeof(write_req_t));
   if (!write_req) {
     free(response);
@@ -275,6 +277,13 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
   size_t headers_len = strlen(headers);
   size_t total_len = headers_len + body_len;
 
+  // uv_write() is an async operation, so when ecewo_send() returns
+  // client can send another request and reset the arena,
+  // but uv_write() might not be completed yet.
+  // Therefore write_req and response must be allocated via malloc.
+  // Otherwise, it causes segfault under a high load.
+  // Both freed in write_completion_cb
+
   char *response = malloc(total_len);
   if (!response) {
     send_error(res->arena, res->ecewo__client_socket, 500);
@@ -285,14 +294,6 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
   if (body_len > 0 && body)
     memcpy(response + headers_len, body, body_len);
 
-  // uv_write() is an async operation
-  // so when ecewo_send() returns, client can send
-  // another request and reset the arena,
-  // but uv_write() might not be completed yet.
-  // Therefore write_req must be
-  // allocated via malloc, not ecewo_alloc!
-  // Otherwise, it may cause segfault
-  // under a high load.
   write_req_t *write_req = malloc(sizeof(write_req_t));
   if (!write_req) {
     free(response);

@@ -181,8 +181,10 @@ int tokenize_path(ecewo_arena_t *arena, const char *path, size_t path_len, token
   return 0;
 }
 
-// Tokenize a route pattern at registration time
-// The caller owns *segs_out and *buf_out and must free both
+// Tokenize a route pattern at registration time.
+// Uses malloc/free because the buffer is temporary.
+// Freed before route_table_add returns,
+// so it must not outlive its own stack frame.
 static int tokenize_pattern(const char *path,
                             path_segment_t **segs_out,
                             uint8_t *count_out,
@@ -314,39 +316,27 @@ static int add_param_to_match(route_match_t *match,
 // Node management
 // -------------------------------------------------------------------------
 
-static route_node_t *route_node_create(void) {
-  return calloc(1, sizeof(route_node_t));
+static route_node_t *route_node_create(ecewo_arena_t *arena) {
+  route_node_t *node = ecewo_alloc(arena, sizeof(route_node_t));
+  if (node)
+    memset(node, 0, sizeof(route_node_t));
+  return node;
 }
 
-static void route_node_free_cb(void *data);
+static void route_node_free_rax_cb(void *data);
 
-static void route_node_free(route_node_t *node) {
+// Only free the rax trie structures; nodes and param name arrays
+// are app-arena-allocated and will be released with the arena.
+static void route_node_free_rax(route_node_t *node) {
   if (!node)
     return;
-
-  for (int i = 0; i < METHOD_COUNT; i++) {
-    if (node->route_param_names[i]) {
-      for (uint8_t j = 0; j < node->route_param_count[i]; j++)
-        free(node->route_param_names[i][j]);
-      free(node->route_param_names[i]);
-    }
-    if (node->wildcard_param_names[i]) {
-      for (uint8_t j = 0; j < node->wildcard_param_count[i]; j++)
-        free(node->wildcard_param_names[i][j]);
-      free(node->wildcard_param_names[i]);
-    }
-  }
-
-  route_node_free(node->param_child);
-
+  route_node_free_rax(node->param_child);
   if (node->children)
-    raxFreeWithCallback(node->children, route_node_free_cb);
-
-  free(node);
+    raxFreeWithCallback(node->children, route_node_free_rax_cb);
 }
 
-static void route_node_free_cb(void *data) {
-  route_node_free((route_node_t *)data);
+static void route_node_free_rax_cb(void *data) {
+  route_node_free_rax((route_node_t *)data);
 }
 
 // -------------------------------------------------------------------------
@@ -480,19 +470,19 @@ uint8_t route_table_allowed_methods(route_table_t *table,
 // Public API
 // -------------------------------------------------------------------------
 
-route_table_t *route_table_create(void) {
-  route_table_t *table = calloc(1, sizeof(route_table_t));
+route_table_t *route_table_create(ecewo_arena_t *arena) {
+  route_table_t *table = ecewo_alloc(arena, sizeof(route_table_t));
   if (!table)
     return NULL;
-  table->root = route_node_create();
-  if (!table->root) {
-    free(table);
+  memset(table, 0, sizeof(route_table_t));
+  table->root = route_node_create(arena);
+  if (!table->root)
     return NULL;
-  }
   return table;
 }
 
 int route_table_add(route_table_t *table,
+                    ecewo_arena_t *arena,
                     llhttp_method_t method,
                     const char *path,
                     ecewo_handler_t handler,
@@ -525,18 +515,15 @@ int route_table_add(route_table_t *table,
       // Store the param names collected so far for this wildcard handler.
       char **names = NULL;
       if (collected_count > 0) {
-        names = malloc(sizeof(char *) * collected_count);
+        names = ecewo_alloc(arena, sizeof(char *) * collected_count);
         if (!names) {
           free(segs);
           free(pattern_buf);
           return -1;
         }
         for (uint8_t j = 0; j < collected_count; j++) {
-          names[j] = malloc(collected_name_lens[j] + 1);
+          names[j] = ecewo_alloc(arena, collected_name_lens[j] + 1);
           if (!names[j]) {
-            for (uint8_t k = 0; k < j; k++)
-              free(names[k]);
-            free(names);
             free(segs);
             free(pattern_buf);
             return -1;
@@ -546,12 +533,6 @@ int route_table_add(route_table_t *table,
         }
       }
 
-      // Free old wildcard param names if re-registering
-      if (node->wildcard_param_names[method_idx]) {
-        for (uint8_t j = 0; j < node->wildcard_param_count[method_idx]; j++)
-          free(node->wildcard_param_names[method_idx][j]);
-        free(node->wildcard_param_names[method_idx]);
-      }
       node->wildcard_handlers[method_idx] = handler;
       node->wildcard_middleware_ctx[method_idx] = middleware_ctx;
       node->wildcard_param_names[method_idx] = names;
@@ -568,7 +549,7 @@ int route_table_add(route_table_t *table,
       collected_count++;
 
       if (!node->param_child) {
-        node->param_child = route_node_create();
+        node->param_child = route_node_create(arena);
         if (!node->param_child) {
           free(segs);
           free(pattern_buf);
@@ -590,7 +571,7 @@ int route_table_add(route_table_t *table,
       void *child = raxFind(node->children,
                             (unsigned char *)segs[i].start, segs[i].len);
       if (child == raxNotFound) {
-        route_node_t *new_child = route_node_create();
+        route_node_t *new_child = route_node_create(arena);
         if (!new_child) {
           free(segs);
           free(pattern_buf);
@@ -601,7 +582,6 @@ int route_table_add(route_table_t *table,
                        (unsigned char *)segs[i].start, segs[i].len,
                        new_child, &old)
             && !old) {
-          route_node_free(new_child);
           free(segs);
           free(pattern_buf);
           return -1;
@@ -615,18 +595,15 @@ int route_table_add(route_table_t *table,
 
   char **names = NULL;
   if (collected_count > 0) {
-    names = malloc(sizeof(char *) * collected_count);
+    names = ecewo_alloc(arena, sizeof(char *) * collected_count);
     if (!names) {
       free(segs);
       free(pattern_buf);
       return -1;
     }
     for (uint8_t j = 0; j < collected_count; j++) {
-      names[j] = malloc(collected_name_lens[j] + 1);
+      names[j] = ecewo_alloc(arena, collected_name_lens[j] + 1);
       if (!names[j]) {
-        for (uint8_t k = 0; k < j; k++)
-          free(names[k]);
-        free(names);
         free(segs);
         free(pattern_buf);
         return -1;
@@ -636,11 +613,6 @@ int route_table_add(route_table_t *table,
     }
   }
 
-  if (node->route_param_names[method_idx]) {
-    for (uint8_t j = 0; j < node->route_param_count[method_idx]; j++)
-      free(node->route_param_names[method_idx][j]);
-    free(node->route_param_names[method_idx]);
-  }
   node->handlers[method_idx] = handler;
   node->middleware_ctx[method_idx] = middleware_ctx;
   node->route_param_names[method_idx] = names;
@@ -707,6 +679,5 @@ void route_table_free(route_table_t *table) {
   if (!table)
     return;
 
-  route_node_free(table->root);
-  free(table);
+  route_node_free_rax(table->root);
 }

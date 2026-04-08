@@ -145,7 +145,10 @@ void ecewo_use(ecewo_app_t *app, const char *path, ecewo_middleware_t middleware
     int new_cap = srv->global_middleware_capacity
         ? srv->global_middleware_capacity * 2
         : INITIAL_MW_CAPACITY;
-    GlobalMiddlewareEntry *tmp = realloc(srv->global_middleware, new_cap * sizeof *tmp);
+    GlobalMiddlewareEntry *tmp = ecewo_realloc(app->arena,
+                                              srv->global_middleware,
+                                              srv->global_middleware_capacity * sizeof *tmp,
+                                              new_cap * sizeof *tmp);
     if (!tmp) {
       LOG_ERROR("Reallocation failed in global middleware");
       abort();
@@ -163,10 +166,7 @@ void reset_middleware(ecewo__server_t *srv) {
   if (!srv)
     return;
 
-  if (srv->global_middleware) {
-    free(srv->global_middleware);
-    srv->global_middleware = NULL;
-  }
+  srv->global_middleware = NULL;
   srv->global_middleware_count = 0;
   srv->global_middleware_capacity = 0;
 }

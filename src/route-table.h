@@ -72,6 +72,7 @@ uint8_t route_table_allowed_methods(route_table_t *table,
                                     const tokenized_path_t *path);
 
 int route_table_add(route_table_t *table,
+                    ecewo_arena_t *arena,
                     llhttp_method_t method,
                     const char *path,
                     ecewo_handler_t handler,
@@ -79,6 +80,6 @@ int route_table_add(route_table_t *table,
 
 int tokenize_path(ecewo_arena_t *arena, const char *path, size_t path_len, tokenized_path_t *result);
 void route_table_free(route_table_t *table);
-route_table_t *route_table_create(void);
+route_table_t *route_table_create(ecewo_arena_t *arena);
 
 #endif

@@ -73,6 +73,7 @@ int ecewo_spawn(void *context, ecewo_spawn_handler_t work_fn, ecewo_spawn_handle
   if (!work_fn)
     return -1;
 
+  // Freed in spawn_cleanup_cb after the uv_async handle closes.
   spawn_t *task = calloc(1, sizeof(spawn_t));
   if (!task)
     return -1;
@@ -180,6 +181,7 @@ int ecewo_spawn_http(ecewo_response_t *res, void *context, ecewo_spawn_handler_t
   if (!res->ecewo__client_socket || !((uv_tcp_t *)res->ecewo__client_socket)->data)
     return -1;
 
+  // Freed in spawn_http_cleanup_cb after the uv_async handle closes.
   spawn_http_t *task = calloc(1, sizeof(spawn_http_t));
   if (!task)
     return -1;

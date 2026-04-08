@@ -132,6 +132,7 @@ void ecewo_route_handler(ecewo_route_t *route, ecewo_handler_t handler) {
   info->middleware = mw;
 
   int result = route_table_add(route->app->server->route_table,
+                               route->app->arena,
                                (llhttp_method_t)route->method,
                                route->path, handler, info);
   if (result != 0)

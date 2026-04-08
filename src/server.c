@@ -59,7 +59,7 @@ static void client_free_server(ecewo__client_t *client) {
     return;
   if (client->connection_arena)
     ecewo_arena_return(client->connection_arena);
-  free(client);
+  free(client); // ref-counted; freed here when the count reaches zero
 }
 
 void ecewo_client_ref(ecewo__client_t *client) {
@@ -164,6 +164,7 @@ static void close_client(ecewo__client_t *client) {
     // uv_shutdown() waits for any pending writes (e.g. a 413 reply) to
     // finish, then the drain loop in server_on_read
     // discards incoming data until the peer closes its end
+    // Freed in on_drain_shutdown callback once the write side drains.
     uv_shutdown_t *req = malloc(sizeof(uv_shutdown_t));
     if (req) {
       req->data = client;
@@ -207,6 +208,7 @@ static void cleanup_idle_connections(uv_timer_t *handle) {
 }
 
 static int start_cleanup_timer(ecewo__server_t *srv) {
+  // libuv handle; freed via uv_close(handle, (uv_close_cb)free).
   srv->cleanup_timer = malloc(sizeof(uv_timer_t));
   if (!srv->cleanup_timer)
     return -1;
@@ -326,7 +328,7 @@ static void client_context_reset(ecewo__client_t *client) {
 
 static void close_cb(uv_handle_t *handle) {
   if (handle->data) {
-    free(handle->data);
+    free(handle->data); // timer_data_t stored by ecewo_timeout/ecewo_interval
     handle->data = NULL;
   }
 }
@@ -351,7 +353,7 @@ static void close_walk_cb(uv_handle_t *handle, void *arg) {
 
 static void on_server_closed(uv_handle_t *handle) {
   ecewo__server_t *srv = (ecewo__server_t *)handle->data;
-  free(handle);
+  free(handle); // tcp_server libuv handle; freed here after uv_close completes
   if (srv) {
     srv->tcp_server = NULL;
     srv->server_closed = true;
@@ -434,6 +436,7 @@ void ecewo_shutdown(ecewo_app_t *app) {
   // Arm a hard timeout as backstop for connections that take too long.
   // on_client_closed() cancels it early once all connections drain.
   if (srv->active_connections > 0) {
+    // libuv handle; freed via uv_close in on_client_closed once all connections drain.
     srv->force_close_timer = malloc(sizeof(uv_timer_t));
     if (srv->force_close_timer) {
       uv_timer_init(srv->loop, srv->force_close_timer);
@@ -677,6 +680,7 @@ int ecewo_timeout_request(ecewo_response_t *res, uint64_t timeout_ms) {
                           0);
   }
 
+  // libuv handle; freed via uv_close(handle, (uv_close_cb)free) in close_client.
   client->request_timeout_timer = malloc(sizeof(uv_timer_t));
   if (!client->request_timeout_timer)
     return -1;
@@ -770,6 +774,7 @@ void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
                        srv->app->request_timeout_ms,
                        0);
       } else {
+        // libuv handle; freed via uv_close(handle, (uv_close_cb)free) in close_client.
         client->request_timeout_timer = malloc(sizeof(uv_timer_t));
         if (client->request_timeout_timer) {
           if (uv_timer_init(srv->loop, client->request_timeout_timer) == 0) {
@@ -835,6 +840,7 @@ static void on_connection(uv_stream_t *server, int status) {
     return;
   }
 
+  // ref-counted; freed in client_free_server when the count reaches zero.
   ecewo__client_t *client = calloc(1, sizeof(ecewo__client_t));
   if (!client)
     return;
@@ -883,6 +889,7 @@ static void on_connection(uv_stream_t *server, int status) {
 }
 
 ecewo_app_t *ecewo_create(void) {
+  // Root struct; no arena exists yet to allocate from.
   ecewo_app_t *app = calloc(1, sizeof(ecewo_app_t));
   if (!app)
     return NULL;
@@ -894,6 +901,7 @@ ecewo_app_t *ecewo_create(void) {
   app->cleanup_interval_ms = 30000;
   app->shutdown_timeout_ms = 15000;
 
+  // Root struct; no arena exists yet to allocate from.
   ecewo__server_t *srv = calloc(1, sizeof(ecewo__server_t));
   if (!srv) {
     free(app);
@@ -903,6 +911,7 @@ ecewo_app_t *ecewo_create(void) {
   srv->app = app;
   app->server = srv;
 
+  // libuv loop; freed via uv_loop_close + free in server_cleanup.
   srv->loop = malloc(sizeof(uv_loop_t));
   if (!srv->loop) {
     free(srv);
@@ -974,7 +983,7 @@ ecewo_app_t *ecewo_create(void) {
 
   atomic_init(&srv->async_work_count, 0);
 
-  srv->route_table = route_table_create();
+  srv->route_table = route_table_create(app->arena);
   if (!srv->route_table) {
     LOG_ERROR("Failed to create route table");
     free(srv->loop);
@@ -1008,6 +1017,7 @@ int ecewo_bind(ecewo_app_t *app, uint16_t port) {
   if (srv->running)
     return SERVER_ALREADY_RUNNING;
 
+  // libuv handle; freed in on_server_closed after uv_close completes.
   srv->tcp_server = malloc(sizeof(uv_tcp_t));
   if (!srv->tcp_server)
     return SERVER_OUT_OF_MEMORY;
@@ -1120,6 +1130,8 @@ ecewo_timer_t *ecewo_timeout(ecewo_timer_cb_t callback, uint64_t delay_ms, void 
   if (!ecewo_server || !ecewo_server->initialized || !callback)
     return NULL;
 
+  // libuv handle; freed via uv_close(handle, (uv_close_cb)free) in timer_callback.
+  // data freed in timer_callback after the handler runs.
   uv_timer_t *timer = malloc(sizeof(uv_timer_t));
   timer_data_t *data = malloc(sizeof(timer_data_t));
 
@@ -1154,6 +1166,8 @@ ecewo_timer_t *ecewo_interval(ecewo_timer_cb_t callback, uint64_t interval_ms, v
   if (!ecewo_server || !ecewo_server->initialized || !callback)
     return NULL;
 
+  // libuv handle; freed via uv_close in ecewo_clear_timer or when the loop drains.
+  // data freed in ecewo_clear_timer.
   uv_timer_t *timer = malloc(sizeof(uv_timer_t));
   timer_data_t *data = malloc(sizeof(timer_data_t));
 
