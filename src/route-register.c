@@ -24,6 +24,19 @@
 #include "middleware.h"
 #include "logger.h"
 
+static llhttp_method_t to_llhttp_method(ecewo_method_t method) {
+  switch (method) {
+  case ECEWO_METHOD_DELETE: return HTTP_DELETE;
+  case ECEWO_METHOD_GET: return HTTP_GET;
+  case ECEWO_METHOD_HEAD: return HTTP_HEAD;
+  case ECEWO_METHOD_POST: return HTTP_POST;
+  case ECEWO_METHOD_PUT: return HTTP_PUT;
+  case ECEWO_METHOD_OPTIONS: return HTTP_OPTIONS;
+  case ECEWO_METHOD_PATCH: return HTTP_PATCH;
+  default: return HTTP_GET;
+  }
+}
+
 typedef struct mw_node_s {
   ecewo_middleware_t fn;
   struct mw_node_s *next;
@@ -133,7 +146,7 @@ void ecewo_route_handler(ecewo_route_t *route, ecewo_handler_t handler) {
 
   int result = route_table_add(route->app->server->route_table,
                                route->app->arena,
-                               (llhttp_method_t)route->method,
+                               to_llhttp_method(route->method),
                                route->path, handler, info);
   if (result != 0)
     LOG_ERROR("Failed to add route: %s", route->path);

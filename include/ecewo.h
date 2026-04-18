@@ -332,13 +332,13 @@ ECEWO_EXPORT void ecewo_use(ecewo_app_t *app, const char *path, ecewo_middleware
 
 /** HTTP methods passed to ecewo_route_new(). */
 typedef enum {
-  ECEWO_HTTP_METHOD_DELETE = 0,
-  ECEWO_HTTP_METHOD_GET = 1,
-  ECEWO_HTTP_METHOD_HEAD = 2,
-  ECEWO_HTTP_METHOD_POST = 3,
-  ECEWO_HTTP_METHOD_PUT = 4,
-  ECEWO_HTTP_METHOD_OPTIONS = 6,
-  ECEWO_HTTP_METHOD_PATCH = 28
+  ECEWO_METHOD_DELETE = 0,
+  ECEWO_METHOD_GET,
+  ECEWO_METHOD_HEAD,
+  ECEWO_METHOD_POST,
+  ECEWO_METHOD_PUT,
+  ECEWO_METHOD_OPTIONS,
+  ECEWO_METHOD_PATCH
 } ecewo_method_t;
 
 // ---------------------------------------------------------------------------
@@ -381,49 +381,49 @@ ECEWO_EXPORT void ecewo_route_register(ecewo_app_t *app, ecewo_method_t method,
 #define ECEWO_GET(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_HTTP_METHOD_GET, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_route_register(app, ECEWO_METHOD_GET, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a POST route. See ECEWO_GET for full documentation. */
 #define ECEWO_POST(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_HTTP_METHOD_POST, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_route_register(app, ECEWO_METHOD_POST, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a PUT route. See ECEWO_GET for full documentation. */
 #define ECEWO_PUT(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_HTTP_METHOD_PUT, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_route_register(app, ECEWO_METHOD_PUT, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a PATCH route. See ECEWO_GET for full documentation. */
 #define ECEWO_PATCH(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_HTTP_METHOD_PATCH, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_route_register(app, ECEWO_METHOD_PATCH, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a DELETE route. See ECEWO_GET for full documentation. */
 #define ECEWO_DELETE(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_HTTP_METHOD_DELETE, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_route_register(app, ECEWO_METHOD_DELETE, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register a HEAD route. ecewo automatically suppresses the body in the response. See ECEWO_GET. */
 #define ECEWO_HEAD(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_HTTP_METHOD_HEAD, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_route_register(app, ECEWO_METHOD_HEAD, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 /** Register an OPTIONS route. See ECEWO_GET for full documentation. */
 #define ECEWO_OPTIONS(app, path, ...) \
   do { \
     void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_HTTP_METHOD_OPTIONS, path, fns, sizeof(fns)/sizeof(void*)); \
+    ecewo_route_register(app, ECEWO_METHOD_OPTIONS, path, fns, sizeof(fns)/sizeof(void*)); \
   } while(0)
 
 // ---------------------------------------------------------------------------
@@ -526,25 +526,36 @@ ECEWO_EXPORT void ecewo_decrement_async_work(void);
 ECEWO_EXPORT void *ecewo_get_loop(void);
 
 /**
- * Configuration for taking over a raw TCP connection from ecewo.
+ * Opaque configuration for taking over a raw TCP connection from ecewo.
  * Used with ecewo_connection_takeover() to implement protocols such as WebSocket
  * that need direct control over the socket after the HTTP upgrade handshake.
  *
- *   alloc_cb  - libuv alloc callback (uv_alloc_cb signature)
- *   read_cb   - libuv read callback  (uv_read_cb signature)
- *   close_cb  - called when the connection closes (uv_close_cb signature)
- *   user_data - passed to alloc_cb and read_cb via the uv_handle->data field
+ * Create with ecewo_takeover_config_new(), populate via the ecewo_takeover_config_set_*()
+ * setters, pass to ecewo_connection_takeover(), then free with ecewo_takeover_config_free().
  */
-typedef struct ecewo_takeover_config_t {
-  void *alloc_cb;
-  void *read_cb;
-  void *close_cb;
-  void *user_data;
-} ecewo_takeover_config_t;
+typedef struct ecewo_takeover_config_s ecewo_takeover_config_t;
+
+/** Allocate a new, zeroed takeover config. Returns NULL on allocation failure. */
+ECEWO_EXPORT ecewo_takeover_config_t *ecewo_takeover_config_new(void);
+
+/** Free a takeover config created by ecewo_takeover_config_new(). */
+ECEWO_EXPORT void ecewo_takeover_config_free(ecewo_takeover_config_t *config);
+
+/** Set the libuv alloc callback (uv_alloc_cb signature). */
+ECEWO_EXPORT void ecewo_takeover_config_set_alloc_cb(ecewo_takeover_config_t *config, void *alloc_cb);
+
+/** Set the libuv read callback (uv_read_cb signature). */
+ECEWO_EXPORT void ecewo_takeover_config_set_read_cb(ecewo_takeover_config_t *config, void *read_cb);
+
+/** Set the libuv close callback (uv_close_cb signature).
+ *  Called when the connection is closed after takeover. */
+ECEWO_EXPORT void ecewo_takeover_config_set_close_cb(ecewo_takeover_config_t *config, void *close_cb);
+
+/** Set user_data, passed to alloc_cb and read_cb via uv_handle->data. */
+ECEWO_EXPORT void ecewo_takeover_config_set_user_data(ecewo_takeover_config_t *config, void *user_data);
 
 /** Transfer ownership of the underlying TCP socket from ecewo to the caller.
  *  After this call, ecewo no longer reads from or manages the connection.
- *  Use ecewo_takeover_config_t to install custom libuv callbacks.
  *  Returns 0 on success, -1 on error. Typically called after sending an HTTP 101 upgrade reply. */
 ECEWO_EXPORT int ecewo_connection_takeover(ecewo_response_t *res, const ecewo_takeover_config_t *config);
 

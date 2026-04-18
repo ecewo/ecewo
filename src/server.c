@@ -30,6 +30,13 @@
 #include "utils.h"
 #include "logger.h"
 
+struct ecewo_takeover_config_s {
+  void *alloc_cb;
+  void *read_cb;
+  void *close_cb;
+  void *user_data;
+};
+
 // Global pointer to the current server instance.
 // Used by functions called from handlers that have no direct app reference
 // (set_timeout, set_interval, get_loop, increment/decrement_async_work).
@@ -532,6 +539,34 @@ static void on_signal(uv_signal_t *handle, int signum) {
 #endif
 
   uv_async_send(&srv->shutdown_async);
+}
+
+ecewo_takeover_config_t *ecewo_takeover_config_new(void) {
+  return calloc(1, sizeof(ecewo_takeover_config_t));
+}
+
+void ecewo_takeover_config_free(ecewo_takeover_config_t *config) {
+  free(config);
+}
+
+void ecewo_takeover_config_set_alloc_cb(ecewo_takeover_config_t *config, void *alloc_cb) {
+  if (config)
+    config->alloc_cb = alloc_cb;
+}
+
+void ecewo_takeover_config_set_read_cb(ecewo_takeover_config_t *config, void *read_cb) {
+  if (config)
+    config->read_cb = read_cb;
+}
+
+void ecewo_takeover_config_set_close_cb(ecewo_takeover_config_t *config, void *close_cb) {
+  if (config)
+    config->close_cb = close_cb;
+}
+
+void ecewo_takeover_config_set_user_data(ecewo_takeover_config_t *config, void *user_data) {
+  if (config)
+    config->user_data = user_data;
 }
 
 int ecewo_connection_takeover(ecewo_response_t *res, const ecewo_takeover_config_t *config) {

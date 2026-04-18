@@ -191,32 +191,32 @@ int test_builder_delete(void) {
 static void setup_routes(ecewo_app_t *app) {
   ecewo_route_t *r;
 
-  r = ecewo_route_new(app, ECEWO_HTTP_METHOD_GET, "/builder/get");
+  r = ecewo_route_new(app, ECEWO_METHOD_GET, "/builder/get");
   ecewo_route_handler(r, handler_hello);
 
-  r = ecewo_route_new(app, ECEWO_HTTP_METHOD_GET, "/builder/one-mw");
+  r = ecewo_route_new(app, ECEWO_METHOD_GET, "/builder/one-mw");
   ecewo_route_middleware(r, mw_a);
   ecewo_route_handler(r, handler_check_mw);
 
-  r = ecewo_route_new(app, ECEWO_HTTP_METHOD_GET, "/builder/two-mw");
+  r = ecewo_route_new(app, ECEWO_METHOD_GET, "/builder/two-mw");
   ecewo_route_middleware(r, mw_a);
   ecewo_route_middleware(r, mw_b);
   ecewo_route_handler(r, handler_check_mw);
 
-  r = ecewo_route_new(app, ECEWO_HTTP_METHOD_GET, "/builder/block");
+  r = ecewo_route_new(app, ECEWO_METHOD_GET, "/builder/block");
   ecewo_route_middleware(r, mw_block);
   ecewo_route_handler(r, handler_hello);
 
-  r = ecewo_route_new(app, ECEWO_HTTP_METHOD_POST, "/builder/post");
+  r = ecewo_route_new(app, ECEWO_METHOD_POST, "/builder/post");
   ecewo_route_handler(r, handler_created);
 
-  r = ecewo_route_new(app, ECEWO_HTTP_METHOD_PUT, "/builder/put");
+  r = ecewo_route_new(app, ECEWO_METHOD_PUT, "/builder/put");
   ecewo_route_handler(r, handler_updated);
 
-  r = ecewo_route_new(app, ECEWO_HTTP_METHOD_PATCH, "/builder/patch");
+  r = ecewo_route_new(app, ECEWO_METHOD_PATCH, "/builder/patch");
   ecewo_route_handler(r, handler_patched);
 
-  r = ecewo_route_new(app, ECEWO_HTTP_METHOD_DELETE, "/builder/delete");
+  r = ecewo_route_new(app, ECEWO_METHOD_DELETE, "/builder/delete");
   ecewo_route_handler(r, handler_deleted);
 }
 
