@@ -327,11 +327,11 @@ void ecewo_arena_return(ecewo_arena_t *arena) {
 
   // Keep only the first region, free the rest
   if (arena->begin && arena->begin->next) {
-    ecewo__arena_region_t *to_free = arena->begin->next;
+    arena_region_t *to_free = arena->begin->next;
     arena->begin->next = NULL;
 
     while (to_free) {
-      ecewo__arena_region_t *next = to_free->next;
+      arena_region_t *next = to_free->next;
       free(to_free);
       to_free = next;
     }

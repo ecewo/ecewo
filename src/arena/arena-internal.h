@@ -29,15 +29,22 @@
 #define ARENA_REGION_SIZE (64UL * 1024UL)
 #endif
 
-struct ecewo__arena_region_s {
-  struct ecewo__arena_region_s *next;
+typedef struct arena_region_s arena_region_t;
+
+struct arena_region_s {
+  struct arena_region_s *next;
   size_t count;
   size_t capacity;
   uintptr_t data[];
 };
 
+struct ecewo_arena_s {
+  arena_region_t *begin;
+  arena_region_t *end;
+};
+
 void arena_reset(ecewo_arena_t *a);
-bool new_region_to(ecewo__arena_region_t **begin, ecewo__arena_region_t **end, size_t capacity);
+bool new_region_to(arena_region_t **begin, arena_region_t **end, size_t capacity);
 
 void arena_pool_init(void);
 void arena_pool_destroy(void);

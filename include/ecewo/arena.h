@@ -24,20 +24,9 @@
 #define ECEWO_ARENA_H
 
 #include <string.h>
-#include "ecewo/export.h"
+#include "export.h"
 
-typedef struct ecewo__arena_region_s ecewo__arena_region_t;
-
-typedef struct ecewo_arena_t {
-  ecewo__arena_region_t *begin;
-  ecewo__arena_region_t *end;
-} ecewo_arena_t;
-
-typedef struct {
-  char *items;
-  size_t count;
-  size_t capacity;
-} ecewo_string_builder_t;
+typedef struct ecewo_arena_s ecewo_arena_t;
 
 ECEWO_EXPORT void *ecewo_alloc(ecewo_arena_t *arena, size_t size_bytes);
 ECEWO_EXPORT void *ecewo_realloc(ecewo_arena_t *arena, void *oldptr, size_t oldsz, size_t newsz);
@@ -52,6 +41,12 @@ ECEWO_EXPORT void ecewo_arena_return(ecewo_arena_t *arena);
 #ifdef ECEWO_DEBUG
 ECEWO_EXPORT void ecewo_arena_pool_stats(void);
 #endif
+
+typedef struct {
+  char *items;
+  size_t count;
+  size_t capacity;
+} ecewo_string_builder_t;
 
 #ifndef ARENA_DA_INIT_CAP
 #define ARENA_DA_INIT_CAP 256
