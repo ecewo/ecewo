@@ -98,7 +98,7 @@ struct ecewo__server_s {
   uv_async_t shutdown_async;
   uv_async_t async_work_handle; // unreffed while idle, reffed while async_work_count > 0
   void (*shutdown_callback)(void);
-  ecewo__client_t *client_list_head;
+  ecewo_client_t *client_list_head;
   uv_timer_t *cleanup_timer;
   uv_timer_t *force_close_timer;
   route_table_t *route_table;
@@ -107,7 +107,7 @@ struct ecewo__server_s {
   uint16_t global_middleware_capacity;
 };
 
-struct ecewo__client_s {
+struct ecewo_client_s {
   uv_tcp_t handle;
   uv_buf_t read_buf;
   char buffer[READ_BUFFER_SIZE];
@@ -115,7 +115,7 @@ struct ecewo__client_s {
   bool draining; // True while draining receive buffer before closing
   uint64_t last_activity;
   bool keep_alive_enabled;
-  struct ecewo__client_s *next;
+  struct ecewo_client_s *next;
 
   ecewo_arena_t *connection_arena; // Lives for the duration of the connection
 

@@ -32,10 +32,10 @@ extern "C" {
 #include "ecewo/arena.h"
 
 /** Opaque timer handle returned by `ecewo_timeout()` and `ecewo_interval()`. Pass to `ecewo_clear_timer()` to cancel. */
-typedef struct ecewo__timer_s ecewo_timer_t;
+typedef struct ecewo_timer_s ecewo_timer_t;
 
 /** Opaque client handle. For plugin authors only; use `ecewo_client_ref/unref()`. */
-typedef struct ecewo__client_s ecewo__client_t;
+typedef struct ecewo_client_s ecewo_client_t;
 
 /**
  * Opaque application instance. Create with ecewo_create(), configure via
@@ -499,17 +499,23 @@ ECEWO_EXPORT size_t ecewo_body_limit(ecewo_request_t *req, size_t max_bytes);
 // PLUGIN / ADVANCED API
 // ---------------------------------------------------------------------------
 
-/** Return true if the client connection associated with ecewo__client_socket_data is still open.
- *  Intended for plugin authors who hold a raw client pointer across async boundaries. */
-ECEWO_EXPORT bool ecewo_client_is_valid(void *ecewo__client_socket_data);
+/** Return the client handle associated with a request. For plugin authors only. */
+ECEWO_EXPORT ecewo_client_t *ecewo_req_client(ecewo_request_t *req);
+
+/** Return the client handle associated with a response. For plugin authors only. */
+ECEWO_EXPORT ecewo_client_t *ecewo_res_client(ecewo_response_t *res);
+
+/** Return true if the client connection is still open.
+ *  Intended for plugin authors who hold a client pointer across async boundaries. */
+ECEWO_EXPORT bool ecewo_client_is_valid(ecewo_client_t *client);
 
 /** Increment the reference count of a client, preventing it from being freed.
  *  Must be paired with a matching ecewo_client_unref(). For plugin authors only. */
-ECEWO_EXPORT void ecewo_client_ref(ecewo__client_t *client);
+ECEWO_EXPORT void ecewo_client_ref(ecewo_client_t *client);
 
 /** Decrement the reference count of a client. When it reaches zero the client is freed.
  *  Must be paired with a prior ecewo_client_ref(). For plugin authors only. */
-ECEWO_EXPORT void ecewo_client_unref(ecewo__client_t *client);
+ECEWO_EXPORT void ecewo_client_unref(ecewo_client_t *client);
 
 /** Notify the server that an asynchronous operation has started.
  *  Prevents the event loop from exiting while the operation is pending.

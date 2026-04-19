@@ -41,7 +41,7 @@
 typedef struct {
   ecewo_request_t *req;
   ecewo_response_t *res;
-  ecewo__client_t *client;
+  ecewo_client_t *client;
   ecewo_body_data_cb_t on_data;
   ecewo_body_end_cb_t on_end;
   size_t max_size;
@@ -72,7 +72,7 @@ static StreamCtx *get_or_create_ctx(ecewo_request_t *req) {
   ctx->max_size = BODY_MAX_SIZE;
 
   if (req->ecewo__client_socket)
-    ctx->client = (ecewo__client_t *)((uv_tcp_t *)req->ecewo__client_socket)->data;
+    ctx->client = (ecewo_client_t *)((uv_tcp_t *)req->ecewo__client_socket)->data;
 
   ecewo_context_set(req, "_body_stream", ctx);
   return ctx;

@@ -39,10 +39,10 @@ typedef struct {
   uv_write_t req;
   uv_buf_t buf;
   char *data;
-  ecewo__client_t *client;
+  ecewo_client_t *client;
 } write_req_t;
 
-static void end_request(ecewo__client_t *client) {
+static void end_request(ecewo_client_t *client) {
   if (!client)
     return;
 
@@ -89,7 +89,7 @@ static bool validate_client_for_response(ecewo_response_t *res) {
   if (uv_is_closing((uv_handle_t *)sock))
     return false;
 
-  ecewo__client_t *client = (ecewo__client_t *)sock->data;
+  ecewo_client_t *client = (ecewo_client_t *)sock->data;
 
   if (!client->valid || client->closing)
     return false;
@@ -167,7 +167,7 @@ void send_error(ecewo_arena_t *arena, uv_tcp_t *ecewo__client_socket, int error_
 
   memset(write_req, 0, sizeof(write_req_t));
   write_req->data = response;
-  write_req->client = (ecewo__client_t *)ecewo__client_socket->data;
+  write_req->client = (ecewo_client_t *)ecewo__client_socket->data;
   if (write_req->client)
     ecewo_client_ref(write_req->client);
   write_req->buf = uv_buf_init(response, (unsigned int)written);
@@ -303,7 +303,7 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
 
   uv_tcp_t *sock = (uv_tcp_t *)res->ecewo__client_socket;
   write_req->data = response;
-  write_req->client = (ecewo__client_t *)sock->data;
+  write_req->client = (ecewo_client_t *)sock->data;
   if (write_req->client)
     ecewo_client_ref(write_req->client);
   write_req->buf = uv_buf_init(response, (unsigned int)total_len);

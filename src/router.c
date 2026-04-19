@@ -144,7 +144,7 @@ static int dispatch(ecewo__server_t *srv,
                     ecewo_arena_t *arena,
                     uv_tcp_t *handle,
                     http_context_t *ctx,
-                    ecewo__client_t *client,
+                    ecewo_client_t *client,
                     const char *path,
                     size_t path_len,
                     ecewo_request_t **req_out,
@@ -314,7 +314,7 @@ static int dispatch(ecewo__server_t *srv,
   return 0;
 }
 
-int router(ecewo__client_t *client, const char *request_data, size_t request_len) {
+int router(ecewo_client_t *client, const char *request_data, size_t request_len) {
   if (!client || !request_data || request_len == 0) {
     if (client)
       send_error(NULL, (uv_tcp_t *)&client->handle, 400);

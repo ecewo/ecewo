@@ -61,7 +61,7 @@ typedef struct timer_data_s {
   bool is_interval;
 } timer_data_t;
 
-static void client_free_server(ecewo__client_t *client) {
+static void client_free_server(ecewo_client_t *client) {
   if (!client)
     return;
   if (client->connection_arena)
@@ -69,13 +69,13 @@ static void client_free_server(ecewo__client_t *client) {
   free(client); // ref-counted; freed here when the count reaches zero
 }
 
-void ecewo_client_ref(ecewo__client_t *client) {
+void ecewo_client_ref(ecewo_client_t *client) {
   if (!client)
     return;
   atomic_fetch_add_explicit(&client->refcount, 1, memory_order_relaxed);
 }
 
-void ecewo_client_unref(ecewo__client_t *client) {
+void ecewo_client_unref(ecewo_client_t *client) {
   if (!client)
     return;
   int prev = atomic_fetch_sub_explicit(&client->refcount, 1, memory_order_acq_rel);
@@ -83,12 +83,12 @@ void ecewo_client_unref(ecewo__client_t *client) {
     client_free_server(client);
 }
 
-static void add_ecewo__client_to_list(ecewo__server_t *srv, ecewo__client_t *client) {
+static void add_ecewo_client_to_list(ecewo__server_t *srv, ecewo_client_t *client) {
   client->next = srv->client_list_head;
   srv->client_list_head = client;
 }
 
-static void remove_client_from_list(ecewo__server_t *srv, ecewo__client_t *client) {
+static void remove_client_from_list(ecewo__server_t *srv, ecewo_client_t *client) {
   if (!client)
     return;
 
@@ -97,7 +97,7 @@ static void remove_client_from_list(ecewo__server_t *srv, ecewo__client_t *clien
     return;
   }
 
-  ecewo__client_t *current = srv->client_list_head;
+  ecewo_client_t *current = srv->client_list_head;
   while (current && current->next != client) {
     current = current->next;
   }
@@ -107,7 +107,7 @@ static void remove_client_from_list(ecewo__server_t *srv, ecewo__client_t *clien
 }
 
 static void on_client_closed(uv_handle_t *handle) {
-  ecewo__client_t *client = (ecewo__client_t *)handle->data;
+  ecewo_client_t *client = (ecewo_client_t *)handle->data;
   if (!client)
     return;
 
@@ -133,7 +133,7 @@ static void on_client_closed(uv_handle_t *handle) {
 // Called when the write-side shutdown completes or is cancelled.
 // Drain mode keeps the read side alive until the peer closes.
 static void on_drain_shutdown(uv_shutdown_t *req, int status) {
-  ecewo__client_t *client = (ecewo__client_t *)req->data;
+  ecewo_client_t *client = (ecewo_client_t *)req->data;
   free(req);
 
   if (uv_is_closing((uv_handle_t *)&client->handle)) {
@@ -153,7 +153,7 @@ static void on_drain_shutdown(uv_shutdown_t *req, int status) {
   ecewo_client_unref(client); // drain reference
 }
 
-static void close_client(ecewo__client_t *client) {
+static void close_client(ecewo_client_t *client) {
   if (!client || client->closing)
     return;
 
@@ -195,10 +195,10 @@ static void cleanup_idle_connections(uv_timer_t *handle) {
 
   uint64_t idle_timeout = srv->app->idle_timeout_ms;
   uint64_t now = uv_now(srv->loop);
-  ecewo__client_t *current = srv->client_list_head;
+  ecewo_client_t *current = srv->client_list_head;
 
   while (current) {
-    ecewo__client_t *next = current->next;
+    ecewo_client_t *next = current->next;
 
     if (current->taken_over) {
       current = next;
@@ -274,7 +274,7 @@ void ecewo_decrement_async_work(void) {
     uv_unref((uv_handle_t *)&ecewo_server->async_work_handle);
 }
 
-static int client_connection_init(ecewo__client_t *client) {
+static int client_connection_init(ecewo_client_t *client) {
   if (!client)
     return -1;
 
@@ -285,7 +285,7 @@ static int client_connection_init(ecewo__client_t *client) {
   return 0;
 }
 
-static void client_parser_init(ecewo__client_t *client) {
+static void client_parser_init(ecewo_client_t *client) {
   if (!client || client->parser_initialized)
     return;
 
@@ -308,7 +308,7 @@ static void client_parser_init(ecewo__client_t *client) {
   client->parser_initialized = true;
 }
 
-static void client_context_init(ecewo__client_t *client) {
+static void client_context_init(ecewo_client_t *client) {
   if (!client || !client->connection_arena)
     return;
 
@@ -322,7 +322,7 @@ static void client_context_init(ecewo__client_t *client) {
                     &client->persistent_settings);
 }
 
-static void client_context_reset(ecewo__client_t *client) {
+static void client_context_reset(ecewo_client_t *client) {
   if (!client || !client->connection_arena)
     return;
 
@@ -380,9 +380,9 @@ static void on_force_close_timeout(uv_timer_t *handle) {
 
   srv->force_close_timer = NULL;
 
-  ecewo__client_t *current = srv->client_list_head;
+  ecewo_client_t *current = srv->client_list_head;
   while (current) {
-    ecewo__client_t *next = current->next;
+    ecewo_client_t *next = current->next;
     if (!current->closing && !uv_is_closing((uv_handle_t *)&current->handle))
       close_client(current);
     current = next;
@@ -432,9 +432,9 @@ void ecewo_shutdown(ecewo_app_t *app) {
 
   // Close idle connections immediately; in-progress ones close themselves
   // when their request finishes. The force-close timer is the backstop.
-  ecewo__client_t *current = srv->client_list_head;
+  ecewo_client_t *current = srv->client_list_head;
   while (current) {
-    ecewo__client_t *next = current->next;
+    ecewo_client_t *next = current->next;
     if (!current->request_in_progress && !current->closing)
       close_client(current);
     current = next;
@@ -576,7 +576,7 @@ int ecewo_connection_takeover(ecewo_response_t *res, const ecewo_takeover_config
   }
 
   uv_tcp_t *handle = (uv_tcp_t *)res->ecewo__client_socket;
-  ecewo__client_t *client = (ecewo__client_t *)handle->data;
+  ecewo_client_t *client = (ecewo_client_t *)handle->data;
 
   if (!client) {
     LOG_ERROR("connection_takeover: No client data");
@@ -612,6 +612,14 @@ int ecewo_connection_takeover(ecewo_response_t *res, const ecewo_takeover_config
 
 void *ecewo_get_client_handle(ecewo_response_t *res) {
   return res ? res->ecewo__client_socket : NULL;
+}
+
+ecewo_client_t *ecewo_req_client(ecewo_request_t *req) {
+  return req ? (ecewo_client_t *)req->ecewo__client_socket : NULL;
+}
+
+ecewo_client_t *ecewo_res_client(ecewo_response_t *res) {
+  return res ? (ecewo_client_t *)res->ecewo__client_socket : NULL;
 }
 
 #ifdef ECEWO_DEBUG
@@ -672,7 +680,7 @@ static void inspect_loop(uv_loop_t *loop) {
 #endif
 
 static void on_request_timeout(uv_timer_t *handle) {
-  ecewo__client_t *client = (ecewo__client_t *)handle->data;
+  ecewo_client_t *client = (ecewo_client_t *)handle->data;
 
   LOG_ERROR("Request timeout - closing connection");
 
@@ -688,7 +696,7 @@ static void on_request_timeout(uv_timer_t *handle) {
   uv_close((uv_handle_t *)handle, (uv_close_cb)free);
 }
 
-static void stop_request_timer(ecewo__client_t *client) {
+static void stop_request_timer(ecewo_client_t *client) {
   if (!client || !client->request_timeout_timer)
     return;
 
@@ -703,7 +711,7 @@ int ecewo_timeout_request(ecewo_response_t *res, uint64_t timeout_ms) {
   if (!sock->data)
     return -1;
 
-  ecewo__client_t *client = (ecewo__client_t *)sock->data;
+  ecewo_client_t *client = (ecewo_client_t *)sock->data;
 
   if (!client || client->closing || !client->srv)
     return -1;
@@ -744,7 +752,7 @@ int ecewo_timeout_request(ecewo_response_t *res, uint64_t timeout_ms) {
 
 void server_alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
   (void)suggested_size;
-  ecewo__client_t *client = (ecewo__client_t *)handle->data;
+  ecewo_client_t *client = (ecewo_client_t *)handle->data;
 
   if (!client || (client->closing && !client->draining)
       || (client->srv && client->srv->shutdown_requested)) {
@@ -757,7 +765,7 @@ void server_alloc_buffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *b
 }
 
 void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
-  ecewo__client_t *client = (ecewo__client_t *)stream->data;
+  ecewo_client_t *client = (ecewo_client_t *)stream->data;
 
   if (!client)
     return;
@@ -876,7 +884,7 @@ static void on_connection(uv_stream_t *server, int status) {
   }
 
   // ref-counted; freed in client_free_server when the count reaches zero.
-  ecewo__client_t *client = calloc(1, sizeof(ecewo__client_t));
+  ecewo_client_t *client = calloc(1, sizeof(ecewo_client_t));
   if (!client)
     return;
 
@@ -913,7 +921,7 @@ static void on_connection(uv_stream_t *server, int status) {
                       server_alloc_buffer,
                       server_on_read)
         == 0) {
-      add_ecewo__client_to_list(srv, client);
+      add_ecewo_client_to_list(srv, client);
       srv->active_connections++;
     } else {
       close_client(client);
@@ -1249,11 +1257,9 @@ void ecewo_clear_timer(ecewo_timer_t *handle) {
   uv_close((uv_handle_t *)timer, (uv_close_cb)free);
 }
 
-bool ecewo_client_is_valid(void *ecewo__client_socket_data) {
-  if (!ecewo__client_socket_data)
+bool ecewo_client_is_valid(ecewo_client_t *client) {
+  if (!client)
     return false;
-
-  ecewo__client_t *client = (ecewo__client_t *)ecewo__client_socket_data;
 
   if (!client->valid || client->closing)
     return false;

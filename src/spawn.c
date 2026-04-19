@@ -113,7 +113,7 @@ typedef struct {
   ecewo_spawn_handler_t work_fn;
   ecewo_spawn_done_t done_fn;
   ecewo_response_t *res;
-  ecewo__client_t *client;
+  ecewo_client_t *client;
 } spawn_http_t;
 
 static void spawn_http_cleanup_cb(uv_handle_t *handle) {
@@ -133,7 +133,7 @@ static void spawn_http_async_cb(uv_async_t *handle) {
     return;
 
   ecewo_response_t *res = t->res;
-  ecewo__client_t *client = t->client;
+  ecewo_client_t *client = t->client;
 
   if (!client) {
     uv_close((uv_handle_t *)handle, spawn_http_cleanup_cb);
@@ -200,7 +200,7 @@ int ecewo_spawn_http(ecewo_response_t *res, void *context, ecewo_spawn_handler_t
   task->res = res;
   task->client = NULL;
   if (res && res->ecewo__client_socket && ((uv_tcp_t *)res->ecewo__client_socket)->data) {
-    task->client = (ecewo__client_t *)((uv_tcp_t *)res->ecewo__client_socket)->data;
+    task->client = (ecewo_client_t *)((uv_tcp_t *)res->ecewo__client_socket)->data;
     ecewo_client_ref(task->client);
   }
 
