@@ -45,6 +45,7 @@
 #include <string.h>
 
 #include "ecewo.h"
+#include "arena-internal.h"
 #include "route-table.h"
 #include "llhttp.h"
 
@@ -69,29 +70,29 @@ int LLVMFuzzerInitialize(int *argc, char ***argv) {
   (void)argc;
   (void)argv;
 
-  route_table = route_table_create();
+  route_table = route_table_create(NULL);
   if (!route_table)
     return 0;
 
   // Static routes
-  route_table_add(route_table, HTTP_GET, "/", noop, NULL);
-  route_table_add(route_table, HTTP_GET, "/users", noop, NULL);
-  route_table_add(route_table, HTTP_GET, "/users/admin", noop, NULL);
-  route_table_add(route_table, HTTP_POST, "/users", noop, NULL);
-  route_table_add(route_table, HTTP_GET, "/api/v1/status", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/users", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/users/admin", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_POST, "/users", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/api/v1/status", noop, NULL);
 
   // Dynamic routes
-  route_table_add(route_table, HTTP_GET, "/users/:id", noop, NULL);
-  route_table_add(route_table, HTTP_PUT, "/users/:id", noop, NULL);
-  route_table_add(route_table, HTTP_DELETE, "/users/:id", noop, NULL);
-  route_table_add(route_table, HTTP_GET, "/users/:id/posts", noop, NULL);
-  route_table_add(route_table, HTTP_POST, "/users/:userId/posts/:postId", noop, NULL);
-  route_table_add(route_table, HTTP_GET, "/api/:version/:resource", noop, NULL);
-  route_table_add(route_table, HTTP_GET, "/api/:version/:resource/:id", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/users/:id", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_PUT, "/users/:id", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_DELETE, "/users/:id", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/users/:id/posts", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_POST, "/users/:userId/posts/:postId", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/api/:version/:resource", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/api/:version/:resource/:id", noop, NULL);
 
   // Wildcard routes
-  route_table_add(route_table, HTTP_GET, "/files/*", noop, NULL);
-  route_table_add(route_table, HTTP_PUT, "/static/*", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_GET, "/files/*", noop, NULL);
+  route_table_add(route_table, NULL, HTTP_PUT, "/static/*", noop, NULL);
 
   return 0;
 }
@@ -111,7 +112,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // or extremely long URLs without crashing when comparing them 
   // against the real routes we defined during startup.
   {
-    Arena arena = {0};
+    ecewo_arena_t arena = {0};
     tokenized_path_t tok = {0};
 
     tokenize_path(&arena, path, path_len, &tok);
@@ -125,7 +126,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     route_match_t match;
     route_table_match(route_table, &parser, &tok, &match, &arena);
 
-    ecewo_free(&arena);
+    arena_free(&arena);
   }
 
   // 2 - Dynamic Registration (Testing the route creator):
@@ -141,7 +142,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     pattern[path_len] = '\0';
 
     for (int m = 0; m < 7; m++) {
-      route_table_t *tmp = route_table_create();
+      route_table_t *tmp = route_table_create(NULL);
       if (!tmp)
         continue;
 
@@ -150,10 +151,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         HTTP_PUT,    HTTP_OPTIONS, HTTP_PATCH,
       };
 
-      route_table_add(tmp, methods[m], pattern, noop, NULL);
+      route_table_add(tmp, NULL, methods[m], pattern, noop, NULL);
 
       // Duplicate registration must not double-free or leak
-      route_table_add(tmp, methods[m], pattern, noop, NULL);
+      route_table_add(tmp, NULL, methods[m], pattern, noop, NULL);
 
       route_table_free(tmp);
     }

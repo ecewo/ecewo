@@ -63,14 +63,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   memcpy(pattern, data, size);
   pattern[size] = '\0';
 
-  route_table_t *table = route_table_create();
+  route_table_t *table = route_table_create(NULL);
   if (!table)
     return 0;
 
   for (int m = 0; m < 7; m++) {
-    route_table_add(table, methods[m], pattern, noop, NULL);
+    route_table_add(table, NULL, methods[m], pattern, noop, NULL);
     // Duplicate registration must not double-free or leak.
-    route_table_add(table, methods[m], pattern, noop, NULL);
+    route_table_add(table, NULL, methods[m], pattern, noop, NULL);
   }
 
   route_table_free(table);
