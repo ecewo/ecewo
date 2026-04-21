@@ -1,4 +1,4 @@
-.PHONY: all test asan-ubsan msan tsan valgrind format format-file lint lint-fix lint-file help
+.PHONY: all test asan-ubsan msan tsan valgrind fuzz format format-file lint lint-fix lint-file help
 
 SOURCES := $(shell find src src/utils include -type f \( -name "*.c" -o -name "*.h" \))
 
@@ -63,6 +63,19 @@ valgrind:
 			--timeout 300 \
 	)
 
+fuzz:
+	@mkdir -p build-fuzz
+	@( \
+		cmake -B build-fuzz \
+			-DCMAKE_BUILD_TYPE=Debug \
+			-DCMAKE_C_COMPILER=clang \
+			-DECEWO_BUILD_FUZZ=ON && \
+		cmake --build build-fuzz -j$(nproc) \
+	)
+	@echo "Fuzz targets built in build-fuzz/. Run with:"
+	@echo "  mkdir -p fuzz/corpus && ./build-fuzz/fuzz-router fuzz/corpus -max_len=4096"
+	@echo "  mkdir -p fuzz/corpus && ./build-fuzz/fuzz-route-register fuzz/corpus -max_len=4096"
+
 all: test asan-ubsan msan tsan valgrind
 
 format:
@@ -90,7 +103,8 @@ help:
 	@printf "%-40s %s\n" "make msan" "Build and run tests with MSAN"
 	@printf "%-40s %s\n" "make tsan" "Build and run tests with TSAN"
 	@printf "%-40s %s\n" "make valgrind" "Build and run tests with Valgrind"
-	@printf "%-40s %s"\n "make all" "Run all of them sequentially"
+	@printf "%-40s %s\n" "make fuzz" "Build libFuzzer targets (requires Clang)"
+	@printf "%-40s %s\n" "make all" "Run all of them sequentially"
 	@printf "\n"
 	@printf "Formatting:\n"
 	@printf "%-40s %s\n" "make format" "Run clang-format"
