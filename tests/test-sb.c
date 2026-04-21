@@ -25,11 +25,17 @@
 #include <stdint.h>
 #include <string.h>
 
+typedef struct {
+  char *items;
+  size_t count;
+  size_t capacity;
+} string_builder_t;
+
 // Null-only produces a single NUL byte
 int test_sb_null_only(void) {
   ecewo_arena_t *a = ecewo_arena_borrow();
   ASSERT_NOT_NULL(a);
-  ecewo_string_builder_t sb = {0};
+  string_builder_t sb = {0};
 
   ecewo_sb_append_null(a, &sb);
 
@@ -45,7 +51,7 @@ int test_sb_null_only(void) {
 int test_sb_single_append(void) {
   ecewo_arena_t *a = ecewo_arena_borrow();
   ASSERT_NOT_NULL(a);
-  ecewo_string_builder_t sb = {0};
+  string_builder_t sb = {0};
 
   ecewo_sb_append_cstr(a, &sb, "hello");
   ecewo_sb_append_null(a, &sb);
@@ -62,7 +68,7 @@ int test_sb_single_append(void) {
 int test_sb_single_char(void) {
   ecewo_arena_t *a = ecewo_arena_borrow();
   ASSERT_NOT_NULL(a);
-  ecewo_string_builder_t sb = {0};
+  string_builder_t sb = {0};
 
   ecewo_da_append(a, &sb, 'X');
   ecewo_sb_append_null(a, &sb);
@@ -80,7 +86,7 @@ int test_sb_single_char(void) {
 int test_sb_path_join(void) {
   ecewo_arena_t *a = ecewo_arena_borrow();
   ASSERT_NOT_NULL(a);
-  ecewo_string_builder_t sb = {0};
+  string_builder_t sb = {0};
 
   const char *parts[] = {"api", "v1", "users"};
   for (int i = 0; i < 3; i++) {
@@ -100,7 +106,7 @@ int test_sb_path_join(void) {
 int test_sb_large_growth(void) {
   ecewo_arena_t *a = ecewo_arena_borrow();
   ASSERT_NOT_NULL(a);
-  ecewo_string_builder_t sb = {0};
+  string_builder_t sb = {0};
 
   // Each iteration appends "ab" (2 bytes). 200 iterations = 400 chars,
   // which exceeds ARENA_DA_INIT_CAP=256 and forces at least one realloc.
@@ -129,7 +135,7 @@ int test_sb_large_growth(void) {
 int test_sb_reuse_after_free(void) {
   ecewo_arena_t *a = ecewo_arena_borrow();
   ASSERT_NOT_NULL(a);
-  ecewo_string_builder_t sb = {0};
+  string_builder_t sb = {0};
 
   ecewo_sb_append_cstr(a, &sb, "first");
   ecewo_sb_append_null(a, &sb);
@@ -139,7 +145,7 @@ int test_sb_reuse_after_free(void) {
   ecewo_free(a);
 
   // Reset the string builder and build a second string with the same arena
-  sb = (ecewo_string_builder_t){0};
+  sb = (string_builder_t){0};
   ecewo_sb_append_cstr(a, &sb, "second");
   ecewo_sb_append_null(a, &sb);
   ASSERT_EQ_STR("second", sb.items);

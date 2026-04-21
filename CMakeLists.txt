@@ -140,16 +140,14 @@ if(NOT TARGET ecewo::ecewo)
     message(STATUS "Building ecewo as STATIC library")
   endif()
 
+  include(GenerateExportHeader)
+  generate_export_header(ecewo
+    BASE_NAME ECEWO
+    EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/include/ecewo-export.h"
+  )
+
   add_library(ecewo::ecewo ALIAS ecewo)
   include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugins.cmake)
-
-  # Always tell the library it is being built (triggers dllexport on Windows).
-  target_compile_definitions(ecewo PRIVATE ECEWO_BUILDING)
-
-  # Propagate ECEWO_SHARED to consumers so they use dllimport on Windows.
-  if(ECEWO_BUILD_SHARED)
-    target_compile_definitions(ecewo PUBLIC ECEWO_SHARED)
-  endif()
 
   if(ECEWO_BUILD_TESTS)
     target_compile_definitions(ecewo PRIVATE ECEWO_TEST_MODE=1)
@@ -260,7 +258,7 @@ if(ECEWO_BUILD_TESTS)
   include(CTest)
   enable_testing()
   
-  ecewo_plugin(mock)
+  ecewo_plugin(mock VERSION dev)
   
   function(ecewo_test test_name)
     set(target_name ecewo-test-${test_name})

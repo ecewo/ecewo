@@ -29,7 +29,8 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "ecewo/arena.h"
+#include <string.h>
+#include "ecewo-export.h"
 
 /** Opaque timer handle returned by `ecewo_timeout()` and `ecewo_interval()`. Pass to `ecewo_clear_timer()` to cancel. */
 typedef struct ecewo_timer_s ecewo_timer_t;
@@ -249,6 +250,27 @@ ECEWO_EXPORT void ecewo_send_html(ecewo_response_t *res, int status, const char 
 
 /** Send a JSON response (Content-Type: application/json). Convenience wrapper around ecewo_send(). */
 ECEWO_EXPORT void ecewo_send_json(ecewo_response_t *res, int status, const char *body);
+
+
+// ---------------------------------------------------------------------------
+// MEMORY MANAGEMENT
+// ---------------------------------------------------------------------------
+
+typedef struct ecewo_arena_s ecewo_arena_t;
+
+ECEWO_EXPORT void *ecewo_alloc(ecewo_arena_t *arena, size_t size_bytes);
+ECEWO_EXPORT void *ecewo_realloc(ecewo_arena_t *arena, void *oldptr, size_t oldsz, size_t newsz);
+ECEWO_EXPORT char *ecewo_strdup(ecewo_arena_t *arena, const char *cstr);
+ECEWO_EXPORT void *ecewo_memdup(ecewo_arena_t *arena, void *data, size_t size);
+ECEWO_EXPORT char *ecewo_sprintf(ecewo_arena_t *arena, const char *format, ...);
+
+ECEWO_EXPORT ecewo_arena_t *ecewo_arena_borrow(void);
+ECEWO_EXPORT void ecewo_arena_return(ecewo_arena_t *arena);
+
+#ifdef ECEWO_DEBUG
+ECEWO_EXPORT void ecewo_arena_pool_stats(void);
+#endif
+
 
 // ---------------------------------------------------------------------------
 // REQUEST ACCESSORS
@@ -579,6 +601,62 @@ ECEWO_EXPORT bool ecewo_is_running(ecewo_app_t *app);
 
 /** Return the number of currently open client connections. Useful for monitoring and testing. */
 ECEWO_EXPORT int ecewo_active_connections(ecewo_app_t *app);
+
+
+// Dynamic Array Macros for C Users
+// Copyright 2022 Alexey Kutepov <reximkut@gmail.com>
+// Copyright 2026 Savas Sahin <savashn@proton.me>
+
+#ifndef ECEWO__DA_INIT_CAP
+#define ECEWO__DA_INIT_CAP 256
+#endif
+
+#ifdef __cplusplus
+#define ECEWO__CAST_PTR(ptr) (decltype(ptr))
+#else
+#define ECEWO__CAST_PTR(...)
+#endif
+
+#define ecewo_da_append(a, da, item)                                                      \
+  do {                                                                                    \
+    if ((da)->count >= (da)->capacity) {                                                  \
+      size_t new_capacity = (da)->capacity == 0 ? ECEWO__DA_INIT_CAP : (da)->capacity * 2; \
+      (da)->items = ECEWO__CAST_PTR((da)->items) ecewo_realloc(                           \
+          (a), (da)->items,                                                               \
+          (da)->capacity * sizeof(*(da)->items),                                          \
+          new_capacity * sizeof(*(da)->items));                                           \
+      (da)->capacity = new_capacity;                                                      \
+    }                                                                                     \
+                                                                                          \
+    (da)->items[(da)->count++] = (item);                                                  \
+  } while (0)
+
+#define ecewo_da_append_many(a, da, new_items, new_items_count)                               \
+  do {                                                                                        \
+    if ((da)->count + (new_items_count) > (da)->capacity) {                                   \
+      size_t new_capacity = (da)->capacity;                                                   \
+      if (new_capacity == 0)                                                                  \
+        new_capacity = ECEWO__DA_INIT_CAP;                                                     \
+      while ((da)->count + (new_items_count) > new_capacity)                                  \
+        new_capacity *= 2;                                                                    \
+      (da)->items = ECEWO__CAST_PTR((da)->items) ecewo_realloc(                               \
+          (a), (da)->items,                                                                   \
+          (da)->capacity * sizeof(*(da)->items),                                              \
+          new_capacity * sizeof(*(da)->items));                                               \
+      (da)->capacity = new_capacity;                                                          \
+    }                                                                                         \
+    memcpy((da)->items + (da)->count, (new_items), (new_items_count) * sizeof(*(da)->items)); \
+    (da)->count += (new_items_count);                                                         \
+  } while (0)
+
+#define ecewo_sb_append_cstr(a, sb, cstr) \
+  do {                                    \
+    const char *s = (cstr);               \
+    size_t n = strlen(s);                 \
+    ecewo_da_append_many(a, sb, s, n);    \
+  } while (0)
+
+#define ecewo_sb_append_null(a, sb) ecewo_da_append(a, sb, 0)
 
 #ifdef __cplusplus
 }
