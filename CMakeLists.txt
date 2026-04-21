@@ -88,13 +88,13 @@ include(FetchContent)
 FetchContent_Declare(
   libuv
   GIT_REPOSITORY https://github.com/libuv/libuv.git
-  GIT_TAG v1.52.0
+  GIT_TAG v1.52.1
   GIT_SHALLOW TRUE
 )
 
 FetchContent_Declare(
   llhttp
-  URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v9.3.0.tar.gz"
+  URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v9.3.1.tar.gz"
 )
 
 if(ECEWO_BUILD_SHARED)
