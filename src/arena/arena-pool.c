@@ -128,7 +128,7 @@ static void arena_pool_try_shrink(void) {
     arena_pool.arenas[arena_pool.head] = NULL;
 
     if (arena) {
-      ecewo_free(arena);
+      arena_free(arena);
       free(arena);
 
 #ifdef ECEWO_DEBUG
@@ -254,7 +254,7 @@ void arena_pool_destroy(void) {
 
   for (int i = 0; i < arena_pool.head; i++) {
     if (arena_pool.arenas[i]) {
-      ecewo_free(arena_pool.arenas[i]);
+      arena_free(arena_pool.arenas[i]);
       free(arena_pool.arenas[i]);
       arena_pool.arenas[i] = NULL;
     }
@@ -320,7 +320,7 @@ void ecewo_arena_return(ecewo_arena_t *arena) {
     return;
 
   if (!arena_pool.initialized) {
-    ecewo_free(arena);
+    arena_free(arena);
     free(arena);
     return;
   }
@@ -348,7 +348,7 @@ void ecewo_arena_return(ecewo_arena_t *arena) {
     arena_pool_try_shrink();
   } else {
     // Pool is full, free directly
-    ecewo_free(arena);
+    arena_free(arena);
     free(arena);
   }
 }

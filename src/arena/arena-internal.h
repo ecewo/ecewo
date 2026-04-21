@@ -43,7 +43,8 @@ struct ecewo_arena_s {
   arena_region_t *end;
 };
 
-void arena_reset(ecewo_arena_t *a);
+void arena_free(ecewo_arena_t *arena);
+void arena_reset(ecewo_arena_t *arena);
 bool new_region_to(arena_region_t **begin, arena_region_t **end, size_t capacity);
 
 void arena_pool_init(void);

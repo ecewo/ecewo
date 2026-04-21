@@ -209,7 +209,7 @@ int test_arena_sprintf_multi(void) {
 }
 
 
-// TEST 12: ecewo_free: arena is reusable after ecewo_free
+// TEST 12: arena reuse: a freshly borrowed arena is usable after returning the previous one
 int test_arena_free(void) {
   ecewo_arena_t *a = ecewo_arena_borrow();
   ASSERT_NOT_NULL(a);
@@ -217,10 +217,11 @@ int test_arena_free(void) {
   void *p = ecewo_alloc(a, 32);
   ASSERT_NOT_NULL(p);
 
-  // ecewo_free clears all regions but keeps the arena struct valid
-  ecewo_free(a);
+  ecewo_arena_return(a);
 
-  // Arena should be usable again after free
+  // Borrow again — the arena (possibly the same recycled one) must be usable
+  a = ecewo_arena_borrow();
+  ASSERT_NOT_NULL(a);
   void *q = ecewo_alloc(a, 32);
   ASSERT_NOT_NULL(q);
 

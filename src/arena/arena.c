@@ -178,7 +178,7 @@ char *ecewo_sprintf(ecewo_arena_t *arena, const char *format, ...) {
   return result;
 }
 
-void ecewo_free(ecewo_arena_t *arena) {
+void arena_free(ecewo_arena_t *arena) {
   arena_region_t *r = arena->begin;
   while (r) {
     arena_region_t *r0 = r;
@@ -189,15 +189,15 @@ void ecewo_free(ecewo_arena_t *arena) {
   arena->end = NULL;
 }
 
-void arena_reset(ecewo_arena_t *a) {
-  if (!a || !a->begin)
+void arena_reset(ecewo_arena_t *arena) {
+  if (!arena || !arena->begin)
     return;
 
-  arena_region_t *region = a->begin;
+  arena_region_t *region = arena->begin;
   while (region) {
     region->count = 0;
     region = region->next;
   }
 
-  a->end = a->begin;
+  arena->end = arena->begin;
 }

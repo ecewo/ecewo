@@ -131,7 +131,7 @@ int test_sb_large_growth(void) {
 }
 
 
-// Reuse after ecewo_free starts fresh
+// Reuse after returning an arena: a freshly borrowed arena starts clean
 int test_sb_reuse_after_free(void) {
   ecewo_arena_t *a = ecewo_arena_borrow();
   ASSERT_NOT_NULL(a);
@@ -141,10 +141,11 @@ int test_sb_reuse_after_free(void) {
   ecewo_sb_append_null(a, &sb);
   ASSERT_EQ_STR("first", sb.items);
 
-  // ecewo_free clears regions but keeps the arena struct alive
-  ecewo_free(a);
+  ecewo_arena_return(a);
 
-  // Reset the string builder and build a second string with the same arena
+  // Borrow a fresh arena and build a second string
+  a = ecewo_arena_borrow();
+  ASSERT_NOT_NULL(a);
   sb = (string_builder_t){0};
   ecewo_sb_append_cstr(a, &sb, "second");
   ecewo_sb_append_null(a, &sb);
