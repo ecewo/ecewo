@@ -26,6 +26,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include "arena-internal.h"
 
 static inline arena_region_t *new_region(size_t capacity) {
@@ -114,17 +115,6 @@ static size_t arena_strlen(const char *s) {
   while (*s++)
     n++;
   return n;
-}
-
-// TODO: Remove it in v4
-void *memcpy(void *dest, const void *src, size_t n) {
-  char *d = dest;
-  const char *s = src;
-
-  for (; n; n--)
-    *d++ = *s++;
-
-  return dest;
 }
 
 char *ecewo_strdup(ecewo_arena_t *arena, const char *cstr) {
