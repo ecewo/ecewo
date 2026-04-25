@@ -1,5 +1,4 @@
 include(FetchContent)
-include(CMakeParseArguments)
 
 function(ecewo_define_plugin NAME)
   set(oneValueArgs REPO DEFAULT_VERSION)
@@ -23,77 +22,57 @@ function(ecewo_define_plugin NAME)
   endif()
 endfunction()
 
-function(ecewo_plugin NAME)
-  if(TARGET ecewo::${NAME})
-    return()
-  endif()
-
-  set(oneValueArgs VERSION REPO)
-  cmake_parse_arguments(P "" "${oneValueArgs}" "" ${ARGN})
-
-  if(NOT DEFINED ECEWO_PLUGIN_${NAME}_REPO)
-    message(FATAL_ERROR "Unknown ecewo plugin: ${NAME}")
-  endif()
-
-  # Repo override
-  if(P_REPO)
-    set(PLUGIN_REPO ${P_REPO})
-  else()
-    set(PLUGIN_REPO ${ECEWO_PLUGIN_${NAME}_REPO})
-  endif()
-
-  # Version logic
-  if(P_VERSION)
-    set(PLUGIN_TAG ${P_VERSION})
-    message(STATUS "Adding ecewo plugin ${NAME} @ ${PLUGIN_TAG}")
-  elseif(DEFINED ECEWO_PLUGIN_${NAME}_DEFAULT_VERSION)
-    set(PLUGIN_TAG ${ECEWO_PLUGIN_${NAME}_DEFAULT_VERSION})
-    message(STATUS
-      "Adding ecewo plugin ${NAME} @ ${PLUGIN_TAG} (default)")
-  else()
-    set(PLUGIN_TAG main)
-    message(WARNING
-      "Adding ecewo plugin ${NAME} WITHOUT version pinning. "
-      "Using 'main' branch (may be unstable)."
-    )
-  endif()
-
-  set(plugin_name ecewo-${NAME})
-
-  FetchContent_Declare(
-    ${plugin_name}
-    GIT_REPOSITORY ${PLUGIN_REPO}
-    GIT_TAG ${PLUGIN_TAG}
-    GIT_SHALLOW TRUE
-  )
-
-  FetchContent_MakeAvailable(${plugin_name})
-
-  if(NOT TARGET ecewo::${NAME})
-    message(FATAL_ERROR
-      "${NAME} plugin did not define target ecewo::${NAME}")
-  endif()
-endfunction()
-
-function(ecewo_plugins)
-  foreach(entry IN LISTS ARGN)
-    string(FIND "${entry}" "@" at_pos)
-
-      if(at_pos GREATER -1)
-        string(SUBSTRING "${entry}" 0 ${at_pos} plugin)
-        math(EXPR ver_pos "${at_pos} + 1")
-        string(SUBSTRING "${entry}" ${ver_pos} -1 version)
-
-        if(version STREQUAL "")
-          message(FATAL_ERROR
-            "Invalid plugin spec '${entry}'. "
-            "Expected format: name@version")
-        endif()
-
-        ecewo_plugin(${plugin} VERSION ${version})
-      else()
-        ecewo_plugin(${entry})
+function(ecewo_add)
+  foreach(SPEC IN LISTS ARGN)
+    string(FIND "${SPEC}" "@" at_pos)
+    if(at_pos GREATER -1)
+      string(SUBSTRING "${SPEC}" 0 ${at_pos} NAME)
+      math(EXPR ver_pos "${at_pos} + 1")
+      string(SUBSTRING "${SPEC}" ${ver_pos} -1 VERSION)
+      if(VERSION STREQUAL "")
+        message(FATAL_ERROR
+          "Invalid plugin spec '${SPEC}'. "
+          "Expected format: name or name@version")
       endif()
+    else()
+      set(NAME "${SPEC}")
+      set(VERSION "")
+    endif()
+
+    if(TARGET ecewo::${NAME})
+      continue()
+    endif()
+
+    if(NOT DEFINED ECEWO_PLUGIN_${NAME}_REPO)
+      message(FATAL_ERROR "Unknown ecewo plugin: ${NAME}")
+    endif()
+
+    if(VERSION)
+      set(PLUGIN_TAG ${VERSION})
+      message(STATUS "Adding ecewo plugin ${NAME} @ ${PLUGIN_TAG}")
+    elseif(DEFINED ECEWO_PLUGIN_${NAME}_DEFAULT_VERSION)
+      set(PLUGIN_TAG ${ECEWO_PLUGIN_${NAME}_DEFAULT_VERSION})
+      message(STATUS "Adding ecewo plugin ${NAME} @ ${PLUGIN_TAG} (default)")
+    else()
+      set(PLUGIN_TAG main)
+      message(WARNING
+        "Adding ecewo plugin ${NAME} WITHOUT version pinning. "
+        "Using 'main' branch (may be unstable).")
+    endif()
+
+    FetchContent_Declare(
+      ecewo-${NAME}
+      GIT_REPOSITORY ${ECEWO_PLUGIN_${NAME}_REPO}
+      GIT_TAG ${PLUGIN_TAG}
+      GIT_SHALLOW TRUE
+    )
+
+    FetchContent_MakeAvailable(ecewo-${NAME})
+
+    if(NOT TARGET ecewo::${NAME})
+      message(FATAL_ERROR
+        "${NAME} plugin did not define target ecewo::${NAME}")
+    endif()
   endforeach()
 endfunction()
 

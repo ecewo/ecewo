@@ -258,7 +258,7 @@ if(ECEWO_BUILD_TESTS)
   include(CTest)
   enable_testing()
   
-  ecewo_plugin(mock VERSION dev)
+  ecewo_add(mock@dev)
   
   function(ecewo_test test_name)
     set(target_name ecewo-test-${test_name})
