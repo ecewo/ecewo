@@ -416,8 +416,8 @@ void ecewo_header_set(ecewo_response_t *res, const char *name, const char *value
     uint16_t new_cap = res->header_capacity ? res->header_capacity * 2 : 8;
 
     ecewo__res_header_t *tmp = ecewo_realloc(res->arena, res->headers,
-                                       res->header_capacity * sizeof(ecewo__res_header_t),
-                                       new_cap * sizeof(ecewo__res_header_t));
+                                             res->header_capacity * sizeof(ecewo__res_header_t),
+                                             new_cap * sizeof(ecewo__res_header_t));
 
     if (!tmp) {
       LOG_ERROR("Failed to realloc headers array");

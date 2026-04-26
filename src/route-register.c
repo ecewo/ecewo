@@ -26,14 +26,22 @@
 
 static llhttp_method_t to_llhttp_method(ecewo_method_t method) {
   switch (method) {
-  case ECEWO_METHOD_DELETE: return HTTP_DELETE;
-  case ECEWO_METHOD_GET: return HTTP_GET;
-  case ECEWO_METHOD_HEAD: return HTTP_HEAD;
-  case ECEWO_METHOD_POST: return HTTP_POST;
-  case ECEWO_METHOD_PUT: return HTTP_PUT;
-  case ECEWO_METHOD_OPTIONS: return HTTP_OPTIONS;
-  case ECEWO_METHOD_PATCH: return HTTP_PATCH;
-  default: return HTTP_GET;
+  case ECEWO_METHOD_DELETE:
+    return HTTP_DELETE;
+  case ECEWO_METHOD_GET:
+    return HTTP_GET;
+  case ECEWO_METHOD_HEAD:
+    return HTTP_HEAD;
+  case ECEWO_METHOD_POST:
+    return HTTP_POST;
+  case ECEWO_METHOD_PUT:
+    return HTTP_PUT;
+  case ECEWO_METHOD_OPTIONS:
+    return HTTP_OPTIONS;
+  case ECEWO_METHOD_PATCH:
+    return HTTP_PATCH;
+  default:
+    return HTTP_GET;
   }
 }
 
@@ -154,8 +162,7 @@ void ecewo_route_handler(ecewo_route_t *route, ecewo_handler_t handler) {
 
 // Internal helper used by the ECEWO_GET/POST/... macros
 // fns = [mw0, mw1, ..., handler], count = total elements
-void ecewo_route_register(ecewo_app_t *app, ecewo_method_t method,
-                          const char *path, void **fns, int count) {
+void ecewo_route_register(ecewo_app_t *app, ecewo_method_t method, const char *path, void **fns, int count) {
   if (!fns || count < 1) {
     LOG_ERROR("No handler provided in route registration");
     return;

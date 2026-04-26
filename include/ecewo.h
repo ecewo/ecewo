@@ -253,7 +253,6 @@ ECEWO_EXPORT void ecewo_send_html(ecewo_response_t *res, int status, const char 
 /** Send a JSON response (Content-Type: application/json). Convenience wrapper around ecewo_send(). */
 ECEWO_EXPORT void ecewo_send_json(ecewo_response_t *res, int status, const char *body);
 
-
 // ---------------------------------------------------------------------------
 // MEMORY MANAGEMENT
 // ---------------------------------------------------------------------------
@@ -272,7 +271,6 @@ ECEWO_EXPORT void ecewo_arena_return(ecewo_arena_t *arena);
 #ifdef ECEWO_DEBUG
 ECEWO_EXPORT void ecewo_arena_pool_stats(void);
 #endif
-
 
 // ---------------------------------------------------------------------------
 // REQUEST ACCESSORS
@@ -385,8 +383,7 @@ ECEWO_EXPORT void ecewo_route_handler(ecewo_route_t *route, ecewo_handler_t hand
 
 // Internal helper used by the macros below. Do not call directly.
 // fns = [middleware0, ..., middlewareN, handler], count = total elements.
-ECEWO_EXPORT void ecewo_route_register(ecewo_app_t *app, ecewo_method_t method,
-                                     const char *path, void **fns, int count);
+ECEWO_EXPORT void ecewo_route_register(ecewo_app_t *app, ecewo_method_t method, const char *path, void **fns, int count);
 
 /**
  * Register a route handler for the given HTTP method and path.
@@ -402,53 +399,53 @@ ECEWO_EXPORT void ecewo_route_register(ecewo_app_t *app, ecewo_method_t method,
  *
  * Routes are matched in registration order; the first match wins.
  */
-#define ECEWO_GET(app, path, ...) \
-  do { \
-    void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_METHOD_GET, path, fns, sizeof(fns)/sizeof(void*)); \
-  } while(0)
+#define ECEWO_GET(app, path, ...)                                                         \
+  do {                                                                                    \
+    void *fns[] = { __VA_ARGS__ };                                                        \
+    ecewo_route_register(app, ECEWO_METHOD_GET, path, fns, sizeof(fns) / sizeof(void *)); \
+  } while (0)
 
 /** Register a POST route. See ECEWO_GET for full documentation. */
-#define ECEWO_POST(app, path, ...) \
-  do { \
-    void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_METHOD_POST, path, fns, sizeof(fns)/sizeof(void*)); \
-  } while(0)
+#define ECEWO_POST(app, path, ...)                                                         \
+  do {                                                                                     \
+    void *fns[] = { __VA_ARGS__ };                                                         \
+    ecewo_route_register(app, ECEWO_METHOD_POST, path, fns, sizeof(fns) / sizeof(void *)); \
+  } while (0)
 
 /** Register a PUT route. See ECEWO_GET for full documentation. */
-#define ECEWO_PUT(app, path, ...) \
-  do { \
-    void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_METHOD_PUT, path, fns, sizeof(fns)/sizeof(void*)); \
-  } while(0)
+#define ECEWO_PUT(app, path, ...)                                                         \
+  do {                                                                                    \
+    void *fns[] = { __VA_ARGS__ };                                                        \
+    ecewo_route_register(app, ECEWO_METHOD_PUT, path, fns, sizeof(fns) / sizeof(void *)); \
+  } while (0)
 
 /** Register a PATCH route. See ECEWO_GET for full documentation. */
-#define ECEWO_PATCH(app, path, ...) \
-  do { \
-    void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_METHOD_PATCH, path, fns, sizeof(fns)/sizeof(void*)); \
-  } while(0)
+#define ECEWO_PATCH(app, path, ...)                                                         \
+  do {                                                                                      \
+    void *fns[] = { __VA_ARGS__ };                                                          \
+    ecewo_route_register(app, ECEWO_METHOD_PATCH, path, fns, sizeof(fns) / sizeof(void *)); \
+  } while (0)
 
 /** Register a DELETE route. See ECEWO_GET for full documentation. */
-#define ECEWO_DELETE(app, path, ...) \
-  do { \
-    void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_METHOD_DELETE, path, fns, sizeof(fns)/sizeof(void*)); \
-  } while(0)
+#define ECEWO_DELETE(app, path, ...)                                                         \
+  do {                                                                                       \
+    void *fns[] = { __VA_ARGS__ };                                                           \
+    ecewo_route_register(app, ECEWO_METHOD_DELETE, path, fns, sizeof(fns) / sizeof(void *)); \
+  } while (0)
 
 /** Register a HEAD route. ecewo automatically suppresses the body in the response. See ECEWO_GET. */
-#define ECEWO_HEAD(app, path, ...) \
-  do { \
-    void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_METHOD_HEAD, path, fns, sizeof(fns)/sizeof(void*)); \
-  } while(0)
+#define ECEWO_HEAD(app, path, ...)                                                         \
+  do {                                                                                     \
+    void *fns[] = { __VA_ARGS__ };                                                         \
+    ecewo_route_register(app, ECEWO_METHOD_HEAD, path, fns, sizeof(fns) / sizeof(void *)); \
+  } while (0)
 
 /** Register an OPTIONS route. See ECEWO_GET for full documentation. */
-#define ECEWO_OPTIONS(app, path, ...) \
-  do { \
-    void *fns[] = { __VA_ARGS__ }; \
-    ecewo_route_register(app, ECEWO_METHOD_OPTIONS, path, fns, sizeof(fns)/sizeof(void*)); \
-  } while(0)
+#define ECEWO_OPTIONS(app, path, ...)                                                         \
+  do {                                                                                        \
+    void *fns[] = { __VA_ARGS__ };                                                            \
+    ecewo_route_register(app, ECEWO_METHOD_OPTIONS, path, fns, sizeof(fns) / sizeof(void *)); \
+  } while (0)
 
 // ---------------------------------------------------------------------------
 // PER-REQUEST CONTEXT
@@ -482,9 +479,7 @@ ECEWO_EXPORT int ecewo_spawn(void *context, ecewo_spawn_handler_t work_fn, ecewo
 /** Run work_fn(context) on a thread-pool thread, then call done_fn(res, context) on the event loop.
  *  Use this to offload blocking work inside a request handler (e.g. database queries, file I/O).
  *  done_fn is the right place to call ecewo_send(). Returns 0 on success, -1 on error. */
-ECEWO_EXPORT int ecewo_spawn_http(ecewo_response_t *res, void *context,
-                                  ecewo_spawn_handler_t work_fn,
-                                  ecewo_spawn_done_t done_fn);
+ECEWO_EXPORT int ecewo_spawn_http(ecewo_response_t *res, void *context, ecewo_spawn_handler_t work_fn, ecewo_spawn_done_t done_fn);
 
 // ---------------------------------------------------------------------------
 // BODY STREAMING
@@ -604,7 +599,6 @@ ECEWO_EXPORT bool ecewo_is_running(ecewo_app_t *app);
 /** Return the number of currently open client connections. Useful for monitoring and testing. */
 ECEWO_EXPORT int ecewo_active_connections(ecewo_app_t *app);
 
-
 // Dynamic Array Macros for C Users
 // Copyright 2022 Alexey Kutepov <reximkut@gmail.com>
 // Copyright 2026 Savas Sahin <savashn@proton.me>
@@ -619,18 +613,18 @@ ECEWO_EXPORT int ecewo_active_connections(ecewo_app_t *app);
 #define ECEWO__CAST_PTR(...)
 #endif
 
-#define ecewo_da_append(a, da, item)                                                      \
-  do {                                                                                    \
-    if ((da)->count >= (da)->capacity) {                                                  \
+#define ecewo_da_append(a, da, item)                                                       \
+  do {                                                                                     \
+    if ((da)->count >= (da)->capacity) {                                                   \
       size_t new_capacity = (da)->capacity == 0 ? ECEWO__DA_INIT_CAP : (da)->capacity * 2; \
-      (da)->items = ECEWO__CAST_PTR((da)->items) ecewo_realloc(                           \
-          (a), (da)->items,                                                               \
-          (da)->capacity * sizeof(*(da)->items),                                          \
-          new_capacity * sizeof(*(da)->items));                                           \
-      (da)->capacity = new_capacity;                                                      \
-    }                                                                                     \
-                                                                                          \
-    (da)->items[(da)->count++] = (item);                                                  \
+      (da)->items = ECEWO__CAST_PTR((da)->items) ecewo_realloc(                            \
+          (a), (da)->items,                                                                \
+          (da)->capacity * sizeof(*(da)->items),                                           \
+          new_capacity * sizeof(*(da)->items));                                            \
+      (da)->capacity = new_capacity;                                                       \
+    }                                                                                      \
+                                                                                           \
+    (da)->items[(da)->count++] = (item);                                                   \
   } while (0)
 
 #define ecewo_da_append_many(a, da, new_items, new_items_count)                               \
@@ -638,7 +632,7 @@ ECEWO_EXPORT int ecewo_active_connections(ecewo_app_t *app);
     if ((da)->count + (new_items_count) > (da)->capacity) {                                   \
       size_t new_capacity = (da)->capacity;                                                   \
       if (new_capacity == 0)                                                                  \
-        new_capacity = ECEWO__DA_INIT_CAP;                                                     \
+        new_capacity = ECEWO__DA_INIT_CAP;                                                    \
       while ((da)->count + (new_items_count) > new_capacity)                                  \
         new_capacity *= 2;                                                                    \
       (da)->items = ECEWO__CAST_PTR((da)->items) ecewo_realloc(                               \

@@ -1274,9 +1274,27 @@ bool ecewo_client_is_valid(ecewo_client_t *client) {
 // App configuration setters
 // ---------------------------------------------------------------------------
 
-void ecewo_set_max_connections(ecewo_app_t *app, int val) { if (app) app->max_connections = val; }
-void ecewo_set_listen_backlog(ecewo_app_t *app, int val) { if (app) app->listen_backlog = val; }
-void ecewo_set_idle_timeout(ecewo_app_t *app, uint64_t ms) { if (app) app->idle_timeout_ms = ms; }
-void ecewo_set_request_timeout(ecewo_app_t *app, uint64_t ms) { if (app) app->request_timeout_ms = ms; }
-void ecewo_set_cleanup_interval(ecewo_app_t *app, uint64_t ms) { if (app) app->cleanup_interval_ms = ms; }
-void ecewo_set_shutdown_timeout(ecewo_app_t *app, uint64_t ms) { if (app) app->shutdown_timeout_ms = ms; }
+void ecewo_set_max_connections(ecewo_app_t *app, int val) {
+  if (app)
+    app->max_connections = val;
+}
+void ecewo_set_listen_backlog(ecewo_app_t *app, int val) {
+  if (app)
+    app->listen_backlog = val;
+}
+void ecewo_set_idle_timeout(ecewo_app_t *app, uint64_t ms) {
+  if (app)
+    app->idle_timeout_ms = ms;
+}
+void ecewo_set_request_timeout(ecewo_app_t *app, uint64_t ms) {
+  if (app)
+    app->request_timeout_ms = ms;
+}
+void ecewo_set_cleanup_interval(ecewo_app_t *app, uint64_t ms) {
+  if (app)
+    app->cleanup_interval_ms = ms;
+}
+void ecewo_set_shutdown_timeout(ecewo_app_t *app, uint64_t ms) {
+  if (app)
+    app->shutdown_timeout_ms = ms;
+}
