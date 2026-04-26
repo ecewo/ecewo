@@ -157,26 +157,36 @@ typedef void (*ecewo_timer_cb_t)(void *user_data);
 // ---------------------------------------------------------------------------
 
 /** Allocate and initialize a new application instance with default configuration.
- *  Returns `NULL` on allocation failure. Free all resources by letting the process exit
- *  after `ecewo_run()` returns, or call `ecewo_shutdown()` from a handler to stop cleanly. */
+ *  Returns `NULL` on allocation failure. The first call lazily initializes the
+ *  process-level runtime (event loop, signal handlers); subsequent calls attach
+ *  the new app to the same runtime. Multiple apps can run on different ports;
+ *  see docs/15.multi-app.md.
+ *  Free all resources by letting the process exit after `ecewo_run()` returns,
+ *  or call `ecewo_shutdown()` from a handler to stop cleanly. */
 ECEWO_EXPORT ecewo_app_t *ecewo_create(void);
 
 /** Bind the server to port without entering the event loop.
- *  Use this when you need to register timers or perform other setup before calling ecewo_run().
+ *  Use this when you need to register timers or perform other setup before calling ecewo_run(),
+ *  or to bind multiple apps before starting the shared loop.
  *  Returns 0 on success, -1 on error. */
 ECEWO_EXPORT int ecewo_bind(ecewo_app_t *app, uint16_t port);
 
-/** Start the event loop. Blocks until `ecewo_shutdown()` is called or a signal stops the process.
- *  Call this after `ecewo_bind()`, or use `ecewo_listen()` which combines both steps. */
-ECEWO_EXPORT void ecewo_run(ecewo_app_t *app);
+/** Start the shared event loop. Blocks until every registered app has been
+ *  shut down (or a signal stops the process). Recursive calls are no-ops.
+ *  Call this after `ecewo_bind()` (on at least one app), or use `ecewo_listen()`
+ *  which combines bind + run for the single-app case. */
+ECEWO_EXPORT void ecewo_run(void);
 
 /** Bind to port and start the event loop in a single call.
  *  Equivalent to `ecewo_bind()` + `ecewo_run()`. Blocks until shutdown. */
 ECEWO_EXPORT void ecewo_listen(ecewo_app_t *app, uint16_t port);
 
-/** Initiate a graceful shutdown. Active connections are drained up to shutdown_timeout_ms,
- *  then forcibly closed. Safe to call from inside a request handler.
- *  ecewo_run() / ecewo_listen() will return once shutdown completes. */
+/** Initiate a graceful shutdown of this app. Closes the listener, drains active
+ *  connections up to shutdown_timeout_ms, then forcibly closes them, fires the
+ *  app's `ecewo_atexit` callback, and unregisters the app from the runtime.
+ *  Safe to call from inside a request handler.
+ *  In a multi-app process, `ecewo_run()` returns once every registered app has
+ *  been shut down - shutting down a single app does not stop the others. */
 ECEWO_EXPORT void ecewo_shutdown(ecewo_app_t *app);
 
 /** Register a callback to be called during shutdown, before the event loop exits.
@@ -536,18 +546,20 @@ ECEWO_EXPORT void ecewo_client_ref(ecewo_client_t *client);
  *  Must be paired with a prior ecewo_client_ref(). For plugin authors only. */
 ECEWO_EXPORT void ecewo_client_unref(ecewo_client_t *client);
 
-/** Notify the server that an asynchronous operation has started.
+/** Notify the runtime that an asynchronous operation has started.
  *  Prevents the event loop from exiting while the operation is pending.
- *  Must be paired with a matching ecewo_decrement_async_work(). For plugin authors only. */
+ *  The counter is process-wide and shared across every app. Must be paired
+ *  with a matching ecewo_decrement_async_work(). For plugin authors only. */
 ECEWO_EXPORT void ecewo_increment_async_work(void);
 
-/** Notify the server that an asynchronous operation has completed.
+/** Notify the runtime that an asynchronous operation has completed.
  *  Must be paired with a prior ecewo_increment_async_work(). For plugin authors only. */
 ECEWO_EXPORT void ecewo_decrement_async_work(void);
 
-/** Return the libuv event loop used by the server as a void pointer.
+/** Return the libuv event loop used by the runtime as a void pointer.
  *  Cast to uv_loop_t * (include uv.h) to use with libuv APIs directly.
- *  Use this to integrate additional libuv handles (e.g. custom I/O watchers) with ecewo. */
+ *  The loop is a process singleton - every app, timer, and ecewo_spawn() call
+ *  shares it. Use this to integrate additional libuv handles with ecewo. */
 ECEWO_EXPORT void *ecewo_get_loop(void);
 
 /**
@@ -593,7 +605,8 @@ ECEWO_EXPORT void *ecewo_get_client_handle(ecewo_response_t *res);
 // DEBUG / DIAGNOSTIC FUNCTIONS
 // ---------------------------------------------------------------------------
 
-/** Return true if the event loop is currently running (i.e. between ecewo_run() and shutdown). */
+/** Return true if this app is currently running (i.e. bound and not yet shut down).
+ *  Per-app: in a multi-app process, one app may return false while others are still up. */
 ECEWO_EXPORT bool ecewo_is_running(ecewo_app_t *app);
 
 /** Return the number of currently open client connections. Useful for monitoring and testing. */

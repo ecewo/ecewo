@@ -83,20 +83,40 @@ struct ecewo_response_s {
 #define READ_BUFFER_SIZE 16384
 #endif
 
+typedef struct ecewo__runtime_s ecewo__runtime_t;
+
+/* Process-level runtime singleton. Owns the shared event loop, signal handlers,
+ * the global async-work counter, and the registry of apps. Lazily initialized
+ * on the first ecewo_create() and torn down after ecewo_run() returns and the
+ * last app has been shut down. */
+struct ecewo__runtime_s {
+  uv_loop_t *loop;
+  bool initialized;
+  bool running;
+  bool shutdown_requested;
+  bool runtime_handles_closed; // sigint/sigterm/shutdown_async/async_work_handle closed
+  atomic_uint_fast32_t async_work_count;
+  uv_async_t async_work_handle; // unreffed while idle, reffed while async_work_count > 0
+  uv_signal_t sigint_handle;
+  uv_signal_t sigterm_handle;
+  bool signals_installed;
+  uv_async_t shutdown_async;
+  ecewo_app_t **apps; // all apps ever created; never shrinks until runtime cleanup
+  size_t app_count;
+  size_t app_capacity;
+  size_t live_app_count; // number of apps that have not yet been shut down
+};
+
 struct ecewo__server_s {
   ecewo_app_t *app;
+  ecewo__runtime_t *runtime;
   bool initialized;
   bool running;
   bool shutdown_requested;
   bool server_closed;
+  bool registered; // currently in runtime->apps[]
   int active_connections;
-  atomic_uint_fast16_t async_work_count;
-  uv_loop_t *loop;
   uv_tcp_t *tcp_server;
-  uv_signal_t sigint_handle;
-  uv_signal_t sigterm_handle;
-  uv_async_t shutdown_async;
-  uv_async_t async_work_handle; // unreffed while idle, reffed while async_work_count > 0
   void (*atexit_cb)(void *user_data);
   void *atexit_user_data;
   ecewo_client_t *client_list_head;
@@ -107,6 +127,10 @@ struct ecewo__server_s {
   uint16_t global_middleware_count;
   uint16_t global_middleware_capacity;
 };
+
+/* Returns the process-level runtime singleton. Used by callers that need the
+ * shared event loop or async-work counter (timers, spawn, plugin authors). */
+ecewo__runtime_t *ecewo__runtime_get(void);
 
 struct ecewo_client_s {
   uv_tcp_t handle;

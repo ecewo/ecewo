@@ -1,5 +1,7 @@
 build
 build-asan-ubsan
+build-asan
+build-ubsan
 build-msan
 build-tsan
 build-valgrind

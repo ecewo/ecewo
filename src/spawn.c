@@ -183,9 +183,9 @@ int ecewo_spawn_http(ecewo_response_t *res, void *context, ecewo_spawn_handler_t
     return -1;
 
   ecewo_client_t *client = (ecewo_client_t *)((uv_tcp_t *)res->ecewo__client_socket)->data;
-  if (!client->srv)
+  if (!client->srv || !client->srv->runtime)
     return -1;
-  uv_loop_t *loop = client->srv->loop;
+  uv_loop_t *loop = client->srv->runtime->loop;
 
   // Freed in spawn_http_cleanup_cb after the uv_async handle closes.
   spawn_http_t *task = calloc(1, sizeof(spawn_http_t));
