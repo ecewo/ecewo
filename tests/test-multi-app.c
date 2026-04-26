@@ -42,9 +42,6 @@ static _Atomic bool servers_ready = false;
 static _Atomic bool app_a_atexit_fired = false;
 static _Atomic bool app_b_atexit_fired = false;
 
-static ecewo_app_t *app_a = NULL;
-static ecewo_app_t *app_b = NULL;
-
 // ----- handlers --------------------------------------------------------------
 
 static void handler_a_root(ecewo_request_t *req, ecewo_response_t *res) {
@@ -252,16 +249,12 @@ static void server_thread_fn(void *arg) {
     return;
   }
 
-  app_a = app_a;
-  app_b = app_b;
   servers_ready = true;
 
   // Runs the shared loop. Returns once every app has been shut down.
   ecewo_run();
 
   servers_ready = false;
-  app_a = NULL;
-  app_b = NULL;
 }
 
 static bool wait_for_servers_ready(void) {

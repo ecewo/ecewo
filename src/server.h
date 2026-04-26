@@ -35,6 +35,11 @@
  * Only internal source files (which include this header) may access fields
  * directly; external code must use the accessor functions. */
 
+typedef struct {
+  void *key;
+  void *data;
+} plugin_slot_t;
+
 struct ecewo_app_s {
   struct ecewo__server_s *server;
   ecewo_arena_t *arena;
@@ -44,6 +49,9 @@ struct ecewo_app_s {
   uint64_t request_timeout_ms;
   uint64_t cleanup_interval_ms;
   uint64_t shutdown_timeout_ms;
+  plugin_slot_t *plugin_slots;
+  int plugin_slot_count;
+  int plugin_slot_capacity;
 };
 
 struct ecewo_request_s {

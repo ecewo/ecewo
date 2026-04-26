@@ -1352,6 +1352,41 @@ int ecewo_active_connections(ecewo_app_t *app) {
   return app && app->server ? app->server->active_connections : 0;
 }
 
+ecewo_arena_t *ecewo_app_arena(const ecewo_app_t *app) {
+  return app ? app->arena : NULL;
+}
+
+void ecewo_set_app_data(ecewo_app_t *app, void *key, void *data) {
+  if (!app || !key)
+    return;
+  for (int i = 0; i < app->plugin_slot_count; i++) {
+    if (app->plugin_slots[i].key == key) {
+      app->plugin_slots[i].data = data;
+      return;
+    }
+  }
+  if (app->plugin_slot_count >= app->plugin_slot_capacity) {
+    int new_cap = app->plugin_slot_capacity == 0 ? 4 : app->plugin_slot_capacity * 2;
+    app->plugin_slots = ecewo_realloc(app->arena, app->plugin_slots,
+                                      (size_t)app->plugin_slot_capacity * sizeof(plugin_slot_t),
+                                      (size_t)new_cap * sizeof(plugin_slot_t));
+    app->plugin_slot_capacity = new_cap;
+  }
+  app->plugin_slots[app->plugin_slot_count].key = key;
+  app->plugin_slots[app->plugin_slot_count].data = data;
+  app->plugin_slot_count++;
+}
+
+void *ecewo_get_app_data(const ecewo_app_t *app, void *key) {
+  if (!app || !key)
+    return NULL;
+  for (int i = 0; i < app->plugin_slot_count; i++) {
+    if (app->plugin_slots[i].key == key)
+      return app->plugin_slots[i].data;
+  }
+  return NULL;
+}
+
 int server_pending_async_work(ecewo_app_t *app) {
   (void)app;
   ecewo__runtime_t *rt = &ecewo_runtime;

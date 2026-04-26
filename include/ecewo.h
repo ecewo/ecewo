@@ -528,6 +528,20 @@ ECEWO_EXPORT size_t ecewo_body_limit(ecewo_request_t *req, size_t max_bytes);
 // PLUGIN / ADVANCED API
 // ---------------------------------------------------------------------------
 
+/** Return the app-lifetime arena allocator.
+ *  Allocations survive until ecewo_run() returns. Use this inside plugin init functions
+ *  to allocate state (config structs, connection pools) that outlives individual requests.
+ *  Retrieve that state in middleware via ecewo_get_app_data(). */
+ECEWO_EXPORT ecewo_arena_t *ecewo_app_arena(const ecewo_app_t *app);
+
+/** Store plugin state on the app, keyed by the address of a file-static variable.
+ *  Using the address of a plugin-private static guarantees uniqueness without coordination.
+ *  Overwrites any previous value for the same key. */
+ECEWO_EXPORT void ecewo_set_app_data(ecewo_app_t *app, void *key, void *data);
+
+/** Retrieve data previously stored with ecewo_set_app_data(), or NULL if key is absent. */
+ECEWO_EXPORT void *ecewo_get_app_data(const ecewo_app_t *app, void *key);
+
 /** Return the client handle associated with a request. For plugin authors only. */
 ECEWO_EXPORT ecewo_client_t *ecewo_req_client(ecewo_request_t *req);
 
