@@ -70,7 +70,8 @@ static void spawn_after_work_cb(uv_work_t *req, int status) {
 }
 
 int ecewo_spawn(void *context, ecewo_spawn_handler_t work_fn, ecewo_spawn_handler_t done_fn) {
-  if (!work_fn)
+  uv_loop_t *loop = ecewo_get_loop();
+  if (!loop || !work_fn)
     return -1;
 
   // Freed in spawn_cleanup_cb after the uv_async handle closes.
@@ -78,7 +79,7 @@ int ecewo_spawn(void *context, ecewo_spawn_handler_t work_fn, ecewo_spawn_handle
   if (!task)
     return -1;
 
-  if (uv_async_init(((uv_loop_t *)ecewo_get_loop()), &task->async_send, spawn_async_cb) != 0) {
+  if (uv_async_init(loop, &task->async_send, spawn_async_cb) != 0) {
     free(task);
     return -1;
   }
@@ -90,7 +91,7 @@ int ecewo_spawn(void *context, ecewo_spawn_handler_t work_fn, ecewo_spawn_handle
   task->result_fn = done_fn;
 
   int result = uv_queue_work(
-      ((uv_loop_t *)ecewo_get_loop()),
+      loop,
       &task->work,
       spawn_work_cb,
       spawn_after_work_cb);
@@ -181,12 +182,17 @@ int ecewo_spawn_http(ecewo_response_t *res, void *context, ecewo_spawn_handler_t
   if (!res->ecewo__client_socket || !((uv_tcp_t *)res->ecewo__client_socket)->data)
     return -1;
 
+  ecewo_client_t *client = (ecewo_client_t *)((uv_tcp_t *)res->ecewo__client_socket)->data;
+  if (!client->srv)
+    return -1;
+  uv_loop_t *loop = client->srv->loop;
+
   // Freed in spawn_http_cleanup_cb after the uv_async handle closes.
   spawn_http_t *task = calloc(1, sizeof(spawn_http_t));
   if (!task)
     return -1;
 
-  if (uv_async_init(((uv_loop_t *)ecewo_get_loop()), &task->async_send, spawn_http_async_cb) != 0) {
+  if (uv_async_init(loop, &task->async_send, spawn_http_async_cb) != 0) {
     free(task);
     return -1;
   }
@@ -198,14 +204,11 @@ int ecewo_spawn_http(ecewo_response_t *res, void *context, ecewo_spawn_handler_t
   task->done_fn = done_fn;
 
   task->res = res;
-  task->client = NULL;
-  if (res && res->ecewo__client_socket && ((uv_tcp_t *)res->ecewo__client_socket)->data) {
-    task->client = (ecewo_client_t *)((uv_tcp_t *)res->ecewo__client_socket)->data;
-    ecewo_client_ref(task->client);
-  }
+  task->client = client;
+  ecewo_client_ref(task->client);
 
   int result = uv_queue_work(
-      ((uv_loop_t *)ecewo_get_loop()),
+      loop,
       &task->work,
       spawn_http_work_cb,
       spawn_http_after_work_cb);

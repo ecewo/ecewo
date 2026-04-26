@@ -181,8 +181,10 @@ ECEWO_EXPORT void ecewo_shutdown(ecewo_app_t *app);
 
 /** Register a callback to be called during shutdown, before the event loop exits.
  *  Useful for releasing resources such as database connections or thread pools.
- *  Multiple callbacks may be registered; they are called in registration order. */
-ECEWO_EXPORT void ecewo_atexit(ecewo_app_t *app, void (*callback)(void));
+ *  user_data is passed to callback unchanged; pass NULL if not needed. */
+ECEWO_EXPORT void ecewo_atexit(ecewo_app_t *app,
+                               void (*callback)(void *user_data),
+                               void *user_data);
 
 // ---------------------------------------------------------------------------
 // TIMER FUNCTIONS

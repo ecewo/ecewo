@@ -97,7 +97,8 @@ struct ecewo__server_s {
   uv_signal_t sigterm_handle;
   uv_async_t shutdown_async;
   uv_async_t async_work_handle; // unreffed while idle, reffed while async_work_count > 0
-  void (*shutdown_callback)(void);
+  void (*atexit_cb)(void *user_data);
+  void *atexit_user_data;
   ecewo_client_t *client_list_head;
   uv_timer_t *cleanup_timer;
   uv_timer_t *force_close_timer;

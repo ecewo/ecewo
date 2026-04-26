@@ -38,9 +38,7 @@ struct ecewo_takeover_config_s {
 };
 
 // Global pointer to the current server instance.
-// Used by functions called from handlers that have no direct app reference
-// (set_timeout, set_interval, get_loop, increment/decrement_async_work).
-// TODO: We might need to add the app param to those functions too
+// Used by functions that have no direct app reference (ecewo_timeout, ecewo_interval).
 static ecewo__server_t *ecewo_server = NULL;
 
 typedef enum {
@@ -470,9 +468,9 @@ static void server_cleanup(ecewo__server_t *srv) {
     ecewo_shutdown(srv->app);
 
   // uv_run() has returned - all in-progress requests are done.
-  // Safe to call the user's shutdown callback while the loop is still valid.
-  if (srv->shutdown_callback)
-    srv->shutdown_callback();
+  // Safe to call the user shutdown callback while the loop is still valid.
+  if (srv->atexit_cb)
+    srv->atexit_cb(srv->atexit_user_data);
 
   // Fully close the cleanup timer (was only unref'd in ecewo_shutdown).
   stop_cleanup_timer(srv);
@@ -1132,9 +1130,11 @@ void ecewo_listen(ecewo_app_t *app, uint16_t port) {
   ecewo_run(app);
 }
 
-void ecewo_atexit(ecewo_app_t *app, void (*callback)(void)) {
-  if (app && app->server)
-    app->server->shutdown_callback = callback;
+void ecewo_atexit(ecewo_app_t *app, void (*callback)(void *user_data), void *user_data) {
+  if (!app || !app->server || !callback)
+    return;
+  app->server->atexit_cb = callback;
+  app->server->atexit_user_data = user_data;
 }
 
 bool ecewo_is_running(ecewo_app_t *app) {

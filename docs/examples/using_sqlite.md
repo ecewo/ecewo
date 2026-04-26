@@ -330,7 +330,8 @@ void get_all_users(ecewo_request_t *req, ecewo_response_t *res) {
 #include "db/db.h"
 #include <stdio.h>
 
-void destroy_app(void) {
+void destroy_app(void *user_data) {
+    (void)user_data;
     sqlite3_close(db);
 }
 
@@ -350,7 +351,7 @@ int main(void) {
     ECEWO_GET(app, "/users", get_all_users);
     ECEWO_POST(app, "/user", add_user);
 
-    ecewo_atexit(app, destroy_app);
+    ecewo_atexit(app, destroy_app, NULL);
 
     ecewo_listen(app, 3000);
     return 0;

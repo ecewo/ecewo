@@ -81,7 +81,8 @@ void handle_login(ecewo_request_t *req, ecewo_response_t *res) {
    // session_free(session);
 }
 
-void cleanup_app(void) {
+void cleanup_app(void *user_data) {
+    (void)user_data;
     session_cleanup();
 }
 
@@ -91,7 +92,7 @@ int main(void) {
 
     ECEWO_POST(app, "/login", handle_login);
 
-    ecewo_atexit(app, cleanup_app);
+    ecewo_atexit(app, cleanup_app, NULL);
     ecewo_listen(app, 3000);
     return 0;
 }
@@ -140,7 +141,8 @@ void handle_logout(ecewo_request_t *req, ecewo_response_t *res) {
     }
 }
 
-void cleanup_app(void) {
+void cleanup_app(void *user_data) {
+    (void)user_data;
     session_cleanup();
 }
 
@@ -151,7 +153,7 @@ int main(void) {
     ECEWO_POST(app, "/login", handle_login);
     ECEWO_GET(app, "/logout", handle_logout); // We also added it
 
-    ecewo_atexit(app, cleanup_app);
+    ecewo_atexit(app, cleanup_app, NULL);
     ecewo_listen(app, 3000);
     return 0;
 }
@@ -225,7 +227,8 @@ void handle_session_data(ecewo_request_t *req, ecewo_response_t *res) {
 }
 
 
-void cleanup_app(void) {
+void cleanup_app(void *user_data) {
+    (void)user_data;
     session_cleanup();
 }
 
@@ -237,7 +240,7 @@ int main(void) {
     ECEWO_POST(app, "/login", handle_login);
     ECEWO_POST(app, "/logout", handle_logout);
 
-    ecewo_atexit(app, cleanup_app);
+    ecewo_atexit(app, cleanup_app, NULL);
     ecewo_listen(app, 3000);
     return 0;
 }
@@ -289,7 +292,8 @@ void handle_protected_route(ecewo_request_t *req, ecewo_response_t *res) {
    free(user_id);
 }
 
-void cleanup_app(void) {
+void cleanup_app(void *user_data) {
+    (void)user_data;
     session_cleanup();
 }
 
@@ -302,7 +306,7 @@ int main(void) {
     ECEWO_POST(app, "/login", handle_login);
     ECEWO_POST(app, "/logout", handle_logout);
 
-    ecewo_atexit(app, cleanup_app);
+    ecewo_atexit(app, cleanup_app, NULL);
     ecewo_listen(app, 3000);
     return 0;
 }
