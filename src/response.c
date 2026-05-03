@@ -207,7 +207,7 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
     body_len = 0;
 
   size_t original_body_len = body_len;
-  if (res->is_head_request) {
+  if (res->is_head_request || (status >= 100 && status < 200) || status == 204) {
     body = NULL;
     body_len = 0;
   }
@@ -256,18 +256,40 @@ void ecewo_send(ecewo_response_t *res, int status, const void *body, size_t body
     }
   }
 
-  char *headers = ecewo_sprintf(res->arena,
-                                "HTTP/1.1 %d\r\n"
-                                "Date: %s\r\n"
-                                "%s"
-                                "Content-Length: %zu\r\n"
-                                "Connection: %s\r\n"
-                                "\r\n",
-                                status,
-                                date_str,
-                                all_headers,
-                                original_body_len,
-                                connection);
+  bool informational = (status >= 100 && status < 200);
+  char *headers;
+  if (informational) {
+    headers = ecewo_sprintf(res->arena,
+                            "HTTP/1.1 %d\r\n"
+                            "%s"
+                            "\r\n",
+                            status,
+                            all_headers);
+  } else if (status == 204) {
+    headers = ecewo_sprintf(res->arena,
+                            "HTTP/1.1 %d\r\n"
+                            "Date: %s\r\n"
+                            "%s"
+                            "Connection: %s\r\n"
+                            "\r\n",
+                            status,
+                            date_str,
+                            all_headers,
+                            connection);
+  } else {
+    headers = ecewo_sprintf(res->arena,
+                            "HTTP/1.1 %d\r\n"
+                            "Date: %s\r\n"
+                            "%s"
+                            "Content-Length: %zu\r\n"
+                            "Connection: %s\r\n"
+                            "\r\n",
+                            status,
+                            date_str,
+                            all_headers,
+                            original_body_len,
+                            connection);
+  }
 
   if (!headers) {
     send_error(res->arena, res->ecewo__client_socket, 500);
