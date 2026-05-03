@@ -161,6 +161,7 @@ struct ecewo_client_s {
 
   bool taken_over;
   void *takeover_user_data;
+  void (*takeover_close_cb)(uv_handle_t *handle);
 
   uv_timer_t *request_timeout_timer;
   atomic_int refcount;

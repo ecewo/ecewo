@@ -606,9 +606,22 @@ ECEWO_EXPORT void ecewo_takeover_config_set_close_cb(ecewo_takeover_config_t *co
 ECEWO_EXPORT void ecewo_takeover_config_set_user_data(ecewo_takeover_config_t *config, void *user_data);
 
 /** Transfer ownership of the underlying TCP socket from ecewo to the caller.
- *  After this call, ecewo no longer reads from or manages the connection.
+ *  After this call, ecewo continues to track the connection (so that idle
+ *  cleanup and shutdown paths know about it) but stops reading from it.
+ *  All inbound bytes are delivered to the read_cb registered on `config`.
+ *
+ *  When the connection finally closes (peer disconnect, plugin-initiated
+ *  close, or shutdown), the close_cb registered on `config` is invoked
+ *  before the underlying client is freed.
+ *
  *  Returns 0 on success, -1 on error. Typically called after sending an HTTP 101 upgrade reply. */
 ECEWO_EXPORT int ecewo_connection_takeover(ecewo_response_t *res, const ecewo_takeover_config_t *config);
+
+/** Close a taken-over socket cleanly. Triggers the close_cb registered with
+ *  ecewo_connection_takeover(), then frees the underlying client.
+ *  Plugins must use this rather than uv_close() directly so ecewo's
+ *  per-connection bookkeeping stays in sync. */
+ECEWO_EXPORT void ecewo_takeover_close_socket(void *handle);
 
 /** Return the raw libuv TCP handle for the connection associated with res as a void pointer.
  *  Cast to uv_tcp_t * (include uv.h) to use with libuv APIs directly.

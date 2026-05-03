@@ -116,9 +116,21 @@ static void remove_client_from_list(ecewo__server_t *srv, ecewo_client_t *client
 }
 
 static void on_client_closed(uv_handle_t *handle) {
-  ecewo_client_t *client = (ecewo_client_t *)handle->data;
+  // For taken-over connections, handle->data has been overwritten with the
+  // plugin's user_data. Recover the ecewo_client_t via the fact that `handle`
+  // is the first field of ecewo_client_s - the address of the embedded
+  // uv_tcp_t equals the address of the surrounding ecewo_client_t
+  ecewo_client_t *client = (ecewo_client_t *)handle;
   if (!client)
     return;
+
+  // If the connection was taken over by a plugin, give it a chance to clean
+  // up its per-connection state before we free the ecewo client
+  if (client->taken_over && client->takeover_close_cb) {
+    void (*cb)(uv_handle_t *) = client->takeover_close_cb;
+    client->takeover_close_cb = NULL;
+    cb(handle);
+  }
 
   ecewo__server_t *srv = client->srv;
   if (srv) {
@@ -174,6 +186,17 @@ static void close_client(ecewo_client_t *client) {
 
   client->closing = true;
   client->valid = false;
+
+  // Taken-over connections do not speak HTTP, so the drain dance
+  // (which re-installs the HTTP read callback)
+  // is both unnecessary and unsafe.
+  // server_on_read would interpret stream->data as ecewo_client_t even though
+  // the plugin overwrote it with its own user_data. Just close directly
+  if (client->taken_over) {
+    if (!uv_is_closing((uv_handle_t *)&client->handle))
+      uv_close((uv_handle_t *)&client->handle, on_client_closed);
+    return;
+  }
 
   if (!uv_is_closing((uv_handle_t *)&client->handle)) {
     // Shut down the write side and drain the receive buffer before closing.
@@ -635,6 +658,13 @@ int ecewo_connection_takeover(ecewo_response_t *res, const ecewo_takeover_config
 
   client->taken_over = true;
   client->takeover_user_data = config->user_data;
+  client->takeover_close_cb = (void (*)(uv_handle_t *))config->close_cb;
+  client->request_in_progress = false;
+  if (client->request_timeout_timer) {
+    uv_timer_stop(client->request_timeout_timer);
+    uv_close((uv_handle_t *)client->request_timeout_timer, (uv_close_cb)free);
+    client->request_timeout_timer = NULL;
+  }
 
   res->replied = true;
 
@@ -655,6 +685,19 @@ int ecewo_connection_takeover(ecewo_response_t *res, const ecewo_takeover_config
 
 void *ecewo_get_client_handle(ecewo_response_t *res) {
   return res ? res->ecewo__client_socket : NULL;
+}
+
+void ecewo_takeover_close_socket(void *handle) {
+  if (!handle)
+    return;
+  uv_handle_t *h = (uv_handle_t *)handle;
+  if (uv_is_closing(h))
+    return;
+  // For taken-over connections, the embedded handle is the first field of
+  // ecewo_client_s, so on_client_closed can recover the client and run the
+  // standard cleanup (and the plugin's close_cb) regardless of handle->data
+  uv_read_stop((uv_stream_t *)h);
+  uv_close(h, on_client_closed);
 }
 
 ecewo_client_t *ecewo_req_client(ecewo_request_t *req) {

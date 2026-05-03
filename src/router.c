@@ -375,7 +375,10 @@ int router(ecewo_client_t *client, const char *request_data, size_t request_len)
     llhttp_resume(ctx->parser);
 
     if (res && res->replied) {
-      retval = res->keep_alive ? REQUEST_KEEP_ALIVE : REQUEST_CLOSE;
+      if (client->taken_over)
+        retval = REQUEST_PENDING;
+      else
+        retval = res->keep_alive ? REQUEST_KEEP_ALIVE : REQUEST_CLOSE;
       goto done;
     }
 
@@ -412,6 +415,8 @@ int router(ecewo_client_t *client, const char *request_data, size_t request_len)
             ? client->pending_res
             : res;
         if (final_res && !final_res->replied) {
+          retval = REQUEST_PENDING;
+        } else if (client->taken_over) {
           retval = REQUEST_PENDING;
         } else {
           retval = final_res && final_res->keep_alive ? REQUEST_KEEP_ALIVE : REQUEST_CLOSE;
@@ -512,6 +517,14 @@ int router(ecewo_client_t *client, const char *request_data, size_t request_len)
       goto done;
 
     if (res && !res->replied) {
+      retval = REQUEST_PENDING;
+      goto done;
+    }
+
+    /* If the handler took over the connection (e.g. WebSocket upgrade),
+     * ecewo no longer owns the request lifecycle. Don't try to close or
+     * keep-alive the connection from here. */
+    if (client->taken_over) {
       retval = REQUEST_PENDING;
       goto done;
     }
